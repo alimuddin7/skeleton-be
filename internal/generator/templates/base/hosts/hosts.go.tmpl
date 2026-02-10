@@ -1,0 +1,43 @@
+package hosts
+
+import (
+	"github.com/rs/zerolog"
+	{{range .Hosts}}
+	{{.}} "{{$.ProjectName}}/hosts/{{.}}"
+	{{end}}
+)
+
+type (
+	host struct {
+		{{range .Hosts}}
+		{{. | title}}Host {{.}}.{{. | title}}
+		{{end}}
+		Logs zerolog.Logger
+	}
+
+	Host interface {
+		{{range .Hosts}}
+		{{. | title}}() {{.}}.{{. | title}}
+		{{end}}
+	}
+)
+
+{{range .Hosts}}
+func (h *host) {{. | title}}() {{.}}.{{. | title}} {
+	return h.{{. | title}}Host
+}
+{{end}}
+
+func InitializeHost(
+	{{range .Hosts}}
+	{{. | untitle}} {{.}}.{{. | title}},
+	{{end}}
+	l zerolog.Logger,
+) Host {
+	return &host{
+		{{range .Hosts}}
+		{{. | title}}Host: {{. | untitle}},
+		{{end}}
+		Logs: l,
+	}
+}

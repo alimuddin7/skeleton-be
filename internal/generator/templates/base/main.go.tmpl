@@ -1,0 +1,142 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"{{.ProjectName}}/configs"
+	"{{.ProjectName}}/controllers"
+	v1Controllers "{{.ProjectName}}/controllers/v1"
+	"{{.ProjectName}}/helpers"
+	"{{.ProjectName}}/routers"
+	"{{.ProjectName}}/scheduler"
+	v1Usecases "{{.ProjectName}}/usecases/v1"
+
+	{{if .Modules}}
+	"{{.ProjectName}}/databases"
+	{{range .Modules}}
+	{{if eq . "mysql"}}mysql "{{$.ProjectName}}/databases/mysql"{{end}}
+	{{if eq . "postgresql"}}postgre "{{$.ProjectName}}/databases/postgre"{{end}}
+	{{if eq . "redis"}}redis "{{$.ProjectName}}/databases/redis"{{end}}
+	{{if eq . "kafka"}}kafka "{{$.ProjectName}}/databases/kafka"{{end}}
+	{{if eq . "nats"}}nats "{{$.ProjectName}}/databases/nats"{{end}}
+	{{if eq . "minio"}}minio "{{$.ProjectName}}/databases/minio"{{end}}
+	{{if eq . "grpc-server"}}grpcserver "{{$.ProjectName}}/grpc/server"{{end}}
+		{{if eq . "redis-cluster"}}rediscluster "{{$.ProjectName}}/databases/redis_cluster"{{end}}
+	{{end}}
+	{{end}}
+	
+	{{if .Hosts}}
+	"{{.ProjectName}}/hosts"
+	{{range .Hosts}}
+	{{.}} "{{$.ProjectName}}/hosts/{{.}}"
+	{{end}}
+	{{end}}
+)
+
+func main() {
+	configs.LoadConfig()
+	logger := helpers.InitializeZeroLogs()
+
+	// Initialize Database (Composite)
+	{{if .Modules}}
+	db := databases.InitializeDatabase(
+		{{range .Modules}}
+		{{if eq . "mysql"}}mysql.InitializeMysqlDatabase(mysql.ConnectMysql(logger), logger),{{end}}
+		{{if eq . "postgresql"}}postgre.InitializePostgreDatabase(postgre.ConnectPostgre(logger), logger),{{end}}
+		{{if eq . "redis"}}redis.InitializeRedisDatabase(redis.ConnectRedis(logger), logger),{{end}}
+		{{if eq . "kafka"}}kafka.InitializeKafkaDatabase(kafka.ConnectKafkaReader(logger), kafka.ConnectKafkaWriter(logger), logger),{{end}}
+		{{if eq . "nats"}}nats.InitializeNatsDatabase(nats.ConnectNats(logger), logger),{{end}}
+		{{if eq . "minio"}}minio.InitializeMinioDatabase(minio.ConnectMinio(logger), logger),{{end}}
+		{{if eq . "redis-cluster"}}rediscluster.InitializeRedisCluster(rediscluster.ConnectRedisCluster(logger), logger),{{end}}
+		{{end}}
+		logger,
+	)
+	{{end}}
+
+	{{if .Hosts}}
+	// Initialize hosts
+	{{range .Hosts}}
+	{{.}}Host := {{.}}.Initialize{{. | title}}(logger)
+	{{end}}
+	host := hosts.InitializeHost(
+		{{range .Hosts}}
+		{{.}}Host,
+		{{end}}
+		logger,
+	)
+	{{end}}
+
+	v1Usecase := v1Usecases.InitializeV1Usecase(
+		{{if .Modules}}db,{{end}}
+		{{if .Hosts}}host,{{end}}
+		logger,
+	)
+	v1Controller := v1Controllers.InitializeV1Controller(v1Usecase, logger)
+
+	controller := controllers.InitializeController(v1Controller, logger)
+
+	{{if or (eq .ProjectType "Backend") (eq .ProjectType "Publisher")}}
+	app := routers.InitializeRouter(controller, logger)
+	{{end}}
+
+	{{if eq .ProjectType "Scheduler"}}
+	// Initialize and Start Scheduler
+	scheduler.InitializeScheduler(v1Usecase, logger).StartScheduler()
+	{{end}}
+
+	{{if eq .ProjectType "gRPC"}}
+	// Initialize and Start gRPC Server
+	{{range .Modules}}
+	{{if eq . "grpc-server"}}
+	gs := grpcserver.InitializeGrpcServer(v1Usecase, logger)
+	go gs.Start()
+	{{end}}
+	{{end}}
+	{{end}}
+
+	{{if eq .ProjectType "Publisher"}}
+	// Publisher-specific initialization if needed
+	{{end}}
+
+	{{if eq .ProjectType "Worker"}}
+	// Start Worker/Consumer loop
+	// Example: go v1Usecase.StartConsumer()
+	{{end}}
+
+	ctx := context.Background()
+	logger.Info().Ctx(ctx).Msg("Finish Initializing")
+
+	{{if or (eq .ProjectType "Backend") (eq .ProjectType "Publisher")}}
+	// Start Server (Backend and Publisher usually expose an API)
+	go func() {
+		if err := app.Listen(fmt.Sprintf("%s:%s", configs.Cfg.Server.Address, configs.Cfg.Server.Port)); err != nil {
+			logger.Error().Ctx(ctx).Err(err).Msg("error while running api")
+		}
+	}()
+	{{end}}
+
+	// Graceful Shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	logger.Info().Ctx(ctx).Msg("Shutting down server...")
+
+	{{if or (eq .ProjectType "Backend") (eq .ProjectType "Publisher")}}
+	if err := app.Shutdown(); err != nil {
+		logger.Error().Ctx(ctx).Err(err).Msg("Server forced to shutdown")
+	}
+	{{end}}
+
+	{{if eq .ProjectType "gRPC"}}
+	{{range .Modules}}
+	{{if eq . "grpc-server"}}
+	gs.Stop()
+	{{end}}
+	{{end}}
+	{{end}}
+}

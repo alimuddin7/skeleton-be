@@ -1,0 +1,80 @@
+package usecases
+
+import (
+	"context"
+	"github.com/rs/zerolog"
+	hModels "{{.ProjectName}}/helpers/models"
+	"{{.ProjectName}}/helpers"
+	{{- if .Modules}}
+	"{{.ProjectName}}/databases"
+	{{- end}}
+	{{- if .Hosts}}
+	"{{.ProjectName}}/hosts"
+	{{- end}}
+)
+
+type Usecase interface {
+	HealthCheck(ctx context.Context) hModels.Response
+	// [V1_USECASE_INTERFACE_MARKER]
+}
+
+type usecase struct {
+	{{- if .Modules}}
+	DB databases.Database
+	{{- end}}
+	{{- if .Hosts}}
+	Host hosts.Host
+	{{- end}}
+	Logs zerolog.Logger
+}
+
+func InitializeV1Usecase(
+	{{- if .Modules}}
+	db databases.Database,
+	{{- end}}
+	{{- if .Hosts}}
+	h hosts.Host,
+	{{- end}}
+	l zerolog.Logger,
+) Usecase {
+	return &usecase{
+		{{- if .Modules}}
+		DB: db,
+		{{- end}}
+		{{- if .Hosts}}
+		Host: h,
+		{{- end}}
+		Logs: l,
+	}
+}
+
+func (u *usecase) HealthCheck(ctx context.Context) hModels.Response {
+	var healthChecks []hModels.DataHealthCheck
+	
+	{{- if .Modules}}
+	// Database health checks
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	healthChecks = append(healthChecks, u.DB.GetMysql().HealthCheck(ctx))
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	healthChecks = append(healthChecks, u.DB.GetPostgre().HealthCheck(ctx))
+	{{- end}}
+	{{- if eq . "redis"}}
+	healthChecks = append(healthChecks, u.DB.GetRedis().HealthCheck(ctx))
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	healthChecks = append(healthChecks, u.DB.GetRedisCluster().HealthCheck(ctx))
+	{{- end}}
+	{{- end}}
+	{{- end}}
+	
+	{{- if .Hosts}}
+	// Host health checks
+	{{- range .Hosts}}
+	healthChecks = append(healthChecks, u.Host.{{. | title}}().HealthCheck(ctx))
+	{{- end}}
+	{{- end}}
+	
+	return helpers.GenerateResponseHealthCheck(healthChecks...)
+}

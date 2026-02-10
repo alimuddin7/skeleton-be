@@ -1,0 +1,19 @@
+module {{.ProjectName}}
+
+go 1.23
+
+require (
+	github.com/google/uuid v1.6.0
+	github.com/rs/zerolog v1.33.0
+	gorm.io/gorm v1.25.10
+	github.com/joho/godotenv v1.5.1
+	github.com/kelseyhightower/envconfig v1.4.0
+	{{range .Modules}}
+	{{if eq . "mysql"}}gorm.io/driver/mysql v1.5.6{{end}}
+	{{if eq . "postgresql"}}gorm.io/driver/postgres v1.5.7{{end}}
+	{{if eq . "redis"}}github.com/redis/go-redis/v9 v9.5.1{{end}}
+	{{if eq . "kafka"}}github.com/confluentinc/confluent-kafka-go v1.9.2{{end}}
+	{{if eq . "nats"}}github.com/nats-io/nats.go v1.35.0{{end}}
+	{{if eq . "minio"}}github.com/minio/minio-go/v7 v7.0.70{{end}}
+	{{end}}
+)

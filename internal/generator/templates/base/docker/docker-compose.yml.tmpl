@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  {{.ProjectName}}:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: {{.ProjectName}}:latest
+    container_name: {{.ProjectName}}
+    ports:
+      - "7878:7878"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+    volumes:
+      - ../errorcodes.json:/app/errorcodes.json
+      - ../logs/:/app/logs/

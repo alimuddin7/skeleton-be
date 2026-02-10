@@ -1,0 +1,51 @@
+package scheduler
+
+import (
+	"context"
+	"{{.ProjectName}}/configs"
+	"{{.ProjectName}}/constants"
+	"{{.ProjectName}}/usecases/v1"
+
+	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
+	"github.com/rs/zerolog"
+)
+
+type Scheduler interface {
+	StartScheduler() error
+}
+
+type scheduler struct {
+	Usecase usecases.Usecase
+	Logs    zerolog.Logger
+}
+
+func InitializeScheduler(u usecases.Usecase, l zerolog.Logger) Scheduler {
+	return &scheduler{
+		Usecase: u,
+		Logs:    l,
+	}
+}
+
+func (s *scheduler) StartScheduler() error {
+	taskTime := configs.Cfg.Scheduler.TaskTime
+	if taskTime == "" {
+		return nil
+	}
+
+	c := cron.New(cron.WithSeconds())
+	_, err := c.AddFunc(taskTime, func() {
+		ctx := context.WithValue(context.Background(), constants.TRANSACTION_ID, uuid.New().String())
+		s.Logs.Info().Ctx(ctx).Msg("Running scheduled task")
+		// s.Usecase.ExScheduler(ctx)
+	})
+
+	if err != nil {
+		s.Logs.Error().Err(err).Msg("Failed to add cron job")
+		return err
+	}
+
+	c.Start()
+	s.Logs.Info().Msgf("Cron job started with schedule: %s", taskTime)
+	return nil
+}

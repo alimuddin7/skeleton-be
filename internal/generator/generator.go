@@ -1,0 +1,373 @@
+package generator
+
+import (
+	"bytes"
+	"embed"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"text/template"
+)
+
+//go:embed templates/*
+var templateFS embed.FS
+
+type Config struct {
+	ProjectName string   `json:"projectName"`
+	ServiceCode string   `json:"serviceCode"`
+	Database    string   `json:"database"`
+	ProjectType string   `json:"projectType"`
+	Modules     []string `json:"modules"`
+	Hosts       []string `json:"hosts"`
+}
+
+func Generate(destDir string, cfg Config) error {
+	if err := createDirectoryStructure(destDir, cfg); err != nil {
+		return err
+	}
+
+	if err := saveProjectState(destDir, cfg); err != nil {
+		return err
+	}
+
+	templates := getBaseTemplates()
+	appendModuleTemplates(cfg, templates)
+
+	for tmplPath, destPath := range templates {
+		if err := renderAppTemplate(tmplPath, filepath.Join(destDir, destPath), cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func AddModule(module string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	if module == "host" {
+		// If user just types 'add host' without name, we should probably prompt or error
+		// For now, let's assume they should use 'add host [name]'
+		return fmt.Errorf("please use 'add host [name]' to add an external host")
+	}
+
+	if isModulePresent(cfg, module) {
+		return nil
+	}
+
+	cfg.Modules = append(cfg.Modules, module)
+	return Generate(".", *cfg)
+}
+
+func AddHost(name string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	lowerName := strings.ToLower(name)
+	for _, h := range cfg.Hosts {
+		if h == lowerName {
+			return nil
+		}
+	}
+
+	cfg.Hosts = append(cfg.Hosts, lowerName)
+
+	// Create host directory
+	hostDir := filepath.Join("hosts", lowerName)
+	if err := os.MkdirAll(hostDir, 0755); err != nil {
+		return err
+	}
+
+	// Render host template
+	hostCfg := struct {
+		ProjectName   string
+		HostName      string
+		HostNameLower string
+		HostNameTitle string
+	}{
+		ProjectName:   cfg.ProjectName,
+		HostName:      name,
+		HostNameLower: lowerName,
+		HostNameTitle: strings.Title(name),
+	}
+
+	if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
+		return err
+	}
+
+	// Regenerate base files to include the new host (config, env, hosts/hosts.go)
+	return Generate(".", *cfg)
+}
+
+func AddFeature(name string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	featureCfg := createFeatureConfig(cfg, name)
+	if err := renderFeatureComponents(featureCfg); err != nil {
+		return err
+	}
+
+	return registerFeatureInBaseFiles(featureCfg.FeatureName, featureCfg.FeatureNameLower)
+}
+
+// Internal helpers
+
+func createDirectoryStructure(destDir string, cfg Config) error {
+	// Base directories (always created)
+	baseDirs := []string{
+		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
+		"routers", "models", "helpers/models", "errorcodes", "docker",
+	}
+
+	for _, dir := range baseDirs {
+		if err := os.MkdirAll(filepath.Join(destDir, dir), 0755); err != nil {
+			return err
+		}
+	}
+
+	// Module-specific directories
+	moduleDirectories := map[string]string{
+		"mysql":         "databases/mysql",
+		"postgresql":    "databases/postgre",
+		"redis":         "databases/redis",
+		"kafka":         "databases/kafka",
+		"nats":          "databases/nats",
+		"minio":         "databases/minio",
+		"redis-cluster": "databases/redis_cluster",
+		"grpc-server":   "grpc/server",
+		"grpc-client":   "grpc/client",
+		"scheduler":     "scheduler",
+	}
+
+	for _, module := range cfg.Modules {
+		if dir, exists := moduleDirectories[module]; exists {
+			if err := os.MkdirAll(filepath.Join(destDir, dir), 0755); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Host directories
+	if len(cfg.Hosts) > 0 {
+		if err := os.MkdirAll(filepath.Join(destDir, "hosts"), 0755); err != nil {
+			return err
+		}
+		for _, host := range cfg.Hosts {
+			if err := os.MkdirAll(filepath.Join(destDir, "hosts", host), 0755); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func saveProjectState(destDir string, cfg Config) error {
+	statePath := filepath.Join(destDir, "skeleton.json")
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(statePath, data, 0644)
+}
+
+func loadProjectState(path string) (*Config, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("missing skeleton.json: %v", err)
+	}
+	var cfg Config
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func isModulePresent(cfg *Config, module string) bool {
+	for _, m := range cfg.Modules {
+		if m == module {
+			return true
+		}
+	}
+	return false
+}
+
+func getBaseTemplates() map[string]string {
+	return map[string]string{
+		"templates/base/main.go.tmpl":                         "main.go",
+		"templates/base/go.mod.tmpl":                          "go.mod",
+		"templates/base/constants/constants.go.tmpl":          "constants/general.go",
+		"templates/base/helpers/models/models.go.tmpl":        "helpers/models/meta.go",
+		"templates/base/helpers/models/log_models.go.tmpl":    "helpers/models/log.go",
+		"templates/base/routers/router.go.tmpl":               "routers/main.go",
+		"templates/base/helpers/middleware.go.tmpl":           "helpers/middleware.go",
+		"templates/base/helpers/logger.go.tmpl":               "helpers/logger.go",
+		"templates/base/helpers/gorm_logger.go.tmpl":          "helpers/gorm_logger.go",
+		"templates/base/controllers/controller.go.tmpl":       "controllers/controller.go",
+		"templates/base/controllers/v1/v1_controller.go.tmpl": "controllers/v1/controller.go",
+		"templates/base/usecases/v1/usecase.go.tmpl":          "usecases/v1/usecase.go",
+		"templates/base/configs/config.go.tmpl":               "configs/config.go",
+		"templates/base/helpers/meta_helpers.go.tmpl":         "helpers/meta.go",
+		"templates/base/helpers/hc_helpers.go.tmpl":           "helpers/hc.go",
+		"templates/base/helpers/error_helpers.go.tmpl":        "helpers/error.go",
+		"templates/base/helpers/general_helpers.go.tmpl":      "helpers/general.go",
+		"templates/base/infra/Makefile.tmpl":                  "Makefile",
+		"templates/base/docker/Dockerfile.tmpl":               "docker/Dockerfile",
+		"templates/base/docker/docker-compose.yml.tmpl":       "docker/docker-compose.yml",
+		"templates/base/configs/env.tmpl":                     ".env.example",
+		"templates/base/infra/gitlab-ci.yml.tmpl":             ".gitlab-ci.yml",
+		"templates/base/errorcodes/errorcodes.json.tmpl":      "errorcodes.json",
+		"templates/base/errorcodes/errorcodes_en.json.tmpl":   "errorcodes/errorcodes-en.json",
+	}
+}
+
+func appendModuleTemplates(cfg Config, templates map[string]string) {
+	// Add databases.go.tmpl only if there are database modules
+	hasDatabase := false
+	for _, mod := range cfg.Modules {
+		if mod == "mysql" || mod == "postgresql" || mod == "redis" || mod == "kafka" || mod == "nats" || mod == "minio" || mod == "redis-cluster" {
+			hasDatabase = true
+			break
+		}
+	}
+	if hasDatabase {
+		templates["templates/base/databases/databases.go.tmpl"] = "databases/database.go"
+	}
+
+	// Add scheduler.go.tmpl only if project type is Scheduler
+	if cfg.ProjectType == "Scheduler" {
+		templates["templates/base/scheduler/scheduler.go.tmpl"] = "scheduler/scheduler.go"
+	}
+
+	// Add hosts.go.tmpl only if there are hosts
+	if len(cfg.Hosts) > 0 {
+		templates["templates/base/hosts/hosts.go.tmpl"] = "hosts/hosts.go"
+	}
+
+	// Add module-specific templates
+	mapping := map[string]string{
+		"mysql":         "databases/mysql/mysql.go",
+		"postgresql":    "databases/postgre/postgre.go",
+		"redis":         "databases/redis/redis.go",
+		"kafka":         "databases/kafka/kafka.go",
+		"nats":          "databases/nats/nats.go",
+		"minio":         "databases/minio/minio.go",
+		"redis-cluster": "databases/redis_cluster/redis_cluster.go",
+		"grpc-server":   "grpc/server/server.go",
+		"grpc-client":   "grpc/client/client.go",
+	}
+	for _, mod := range cfg.Modules {
+		if dest, ok := mapping[mod]; ok {
+			tmplName := mod
+			if mod == "postgresql" {
+				tmplName = "postgre"
+			}
+			templates[fmt.Sprintf("templates/modules/%s.go.tmpl", tmplName)] = dest
+		}
+	}
+
+	// Add host-specific templates
+	for _, host := range cfg.Hosts {
+		templates[fmt.Sprintf("templates/modules/host.go.tmpl")] = fmt.Sprintf("hosts/%s/%s.go", host, host)
+	}
+}
+
+type featureConfig struct {
+	ProjectName      string
+	FeatureName      string
+	FeatureNameLower string
+}
+
+func createFeatureConfig(cfg *Config, name string) featureConfig {
+	return featureConfig{
+		ProjectName:      cfg.ProjectName,
+		FeatureName:      strings.Title(name),
+		FeatureNameLower: strings.ToLower(name),
+	}
+}
+
+func renderFeatureComponents(cfg featureConfig) error {
+	templates := map[string]string{
+		"templates/features/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s.go", cfg.FeatureNameLower),
+		"templates/features/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s.go", cfg.FeatureNameLower),
+		"templates/features/model.go.tmpl":      fmt.Sprintf("models/%s.go", cfg.FeatureNameLower),
+	}
+
+	for tmplPath, destPath := range templates {
+		if err := renderAppTemplate(tmplPath, destPath, cfg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func registerFeatureInBaseFiles(name, lower string) error {
+	if err := injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]", fmt.Sprintf("\tv1.Get(\"/%s\", ctrl.V1().%s)", lower, name)); err != nil {
+		return err
+	}
+	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name)); err != nil {
+		return err
+	}
+	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) hModels.Response", name)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func injectBelowMarker(filePath, marker, code string) error {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return err // Could be missing if called prematurely
+	}
+	if bytes.Contains(content, []byte(code)) {
+		return nil
+	}
+	newContent := bytes.Replace(content, []byte(marker), []byte(marker+"\n"+code), 1)
+	return os.WriteFile(filePath, newContent, 0644)
+}
+
+func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
+	content, err := templateFS.ReadFile(tmplPath)
+	if err != nil {
+		return fmt.Errorf("error reading embedded template %s: %v", tmplPath, err)
+	}
+
+	tmpl, err := template.New(filepath.Base(tmplPath)).Funcs(template.FuncMap{
+		"title": strings.Title,
+		"upper": strings.ToUpper,
+		"untitle": func(s string) string {
+			if len(s) == 0 {
+				return s
+			}
+			return strings.ToLower(s[0:1]) + s[1:]
+		},
+		"has": func(slice []string, item string) bool {
+			for _, s := range slice {
+				if s == item {
+					return true
+				}
+			}
+			return false
+		},
+	}).Parse(string(content))
+	if err != nil {
+		return fmt.Errorf("error parsing template %s: %v", tmplPath, err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return fmt.Errorf("error executing template %s: %v", tmplPath, err)
+	}
+
+	return os.WriteFile(destPath, buf.Bytes(), 0644)
+}

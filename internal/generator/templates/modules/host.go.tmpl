@@ -1,0 +1,60 @@
+package {{.HostNameLower}}
+
+import (
+	"context"
+	"fmt"
+	"{{.ProjectName}}/configs"
+	"{{.ProjectName}}/helpers"
+	"{{.ProjectName}}/helpers/models"
+	"github.com/reiver/go-telnet"
+	"github.com/rs/zerolog"
+)
+
+type (
+	{{.HostNameLower}} struct {
+		Host          string
+		EndpointGet   string
+		EndpointPost  string
+		Authorization string
+		Log           zerolog.Logger
+	}
+
+	{{.HostNameTitle}} interface {
+		HealthCheck(ctx context.Context) models.DataHealthCheck
+	}
+)
+
+func Initialize{{.HostNameTitle}}(log zerolog.Logger) {{.HostNameTitle}} {
+	h := {{.HostNameLower}}{
+		Host:         configs.Cfg.Hosts.{{.HostNameTitle}}.Host,
+		EndpointGet:  configs.Cfg.Hosts.{{.HostNameTitle}}.Get,
+		EndpointPost: configs.Cfg.Hosts.{{.HostNameTitle}}.Post,
+		Log:          log,
+	}
+
+	urlSvr := helpers.TelnetIP(h.Host)
+	_, err := telnet.DialTo(urlSvr)
+	if err != nil {
+		log.Error().Msg("Error telnet: " + urlSvr)
+	} else {
+		log.Info().Msg("Success telnet: " + urlSvr)
+	}
+
+	return &h
+}
+
+func (h *{{.HostNameLower}}) HealthCheck(ctx context.Context) models.DataHealthCheck {
+	urlSvr := helpers.TelnetIP(h.Host)
+	res := models.DataHealthCheck{
+		ServiceName: "{{.HostNameTitle}} (" + urlSvr + ")",
+		StatusCode:  200,
+	}
+
+	_, err := telnet.DialTo(urlSvr)
+	if err != nil {
+		h.Log.Error().Ctx(ctx).Err(err).Msg("Error telnet")
+		res.StatusCode = 400
+		res.AdditionalData = err.Error()
+	}
+	return res
+}

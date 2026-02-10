@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  test-project:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: test-project:latest
+    container_name: test-project
+    ports:
+      - "7878:7878"
+    env_file:
+      - ../.env
+    restart: unless-stopped
+    volumes:
+      - ../errorcodes.json:/app/errorcodes.json
+      - ../logs/:/app/logs/

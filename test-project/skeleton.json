@@ -1,0 +1,11 @@
+{
+  "projectName": "test-project",
+  "serviceCode": "01",
+  "database": "",
+  "projectType": "Backend",
+  "modules": [
+    "postgresql",
+    "redis"
+  ],
+  "hosts": []
+}

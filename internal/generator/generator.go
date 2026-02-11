@@ -366,7 +366,7 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 	}
 	for _, mod := range cfg.Modules {
 		if dest, ok := mapping[mod]; ok {
-			tmplName := mod
+			tmplName := strings.ReplaceAll(mod, "-", "_")
 			if mod == "postgresql" {
 				tmplName = "postgre"
 			}
@@ -376,7 +376,7 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 
 	// Add host-specific templates
 	for _, host := range cfg.Hosts {
-		templates[fmt.Sprintf("templates/modules/host.go.tmpl")] = fmt.Sprintf("hosts/%s/%s.go", host, host)
+		templates["templates/modules/host.go.tmpl"] = fmt.Sprintf("hosts/%s/%s.go", host, host)
 	}
 }
 

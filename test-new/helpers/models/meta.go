@@ -23,8 +23,3 @@ type ErrorCodeElement struct {
 	Key     string   `json:"key"`
 	Content MetaData `json:"content"`
 }
-
-type DataHealthCheck struct {
-	Name   string `json:"name"`
-	Status bool   `json:"status"`
-}

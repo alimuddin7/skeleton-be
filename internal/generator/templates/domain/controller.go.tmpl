@@ -1,0 +1,100 @@
+package controllers
+
+import (
+	"{{.ProjectName}}/helpers/models"
+	{{if .IsCRUD}}
+	dm "{{.ProjectName}}/models"
+	"{{.ProjectName}}/usecases/v1"
+	"strconv"
+	{{else}}
+	"net/http"
+	{{end}}
+
+	"github.com/gofiber/fiber/v3"
+)
+
+{{if .IsCRUD}}
+type {{.FeatureName}}Controller interface {
+	Create(c fiber.Ctx) error
+	Get(c fiber.Ctx) error
+	List(c fiber.Ctx) error
+	Update(c fiber.Ctx) error
+	Delete(c fiber.Ctx) error
+}
+
+type {{.FeatureNameLower}}Controller struct {
+	usecase usecases.{{.FeatureName}}Usecase
+}
+
+func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.FeatureName}}Controller {
+	return &{{.FeatureNameLower}}Controller{
+		usecase: u,
+	}
+}
+
+func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
+	var req dm.{{.FeatureName}}
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	res := ctr.usecase.Create(c.Context(), &req)
+	return c.Status(res.Meta.Code).JSON(res)
+}
+
+func (ctr *{{.FeatureNameLower}}Controller) Get(c fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
+	}
+
+	res := ctr.usecase.Get(c.Context(), id)
+	return c.Status(res.Meta.Code).JSON(res)
+}
+
+func (ctr *{{.FeatureNameLower}}Controller) List(c fiber.Ctx) error {
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+
+	res := ctr.usecase.List(c.Context(), page, limit)
+	return c.Status(res.Meta.Code).JSON(res)
+}
+
+func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
+	}
+
+	var req dm.{{.FeatureName}}
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	res := ctr.usecase.Update(c.Context(), id, &req)
+	return c.Status(res.Meta.Code).JSON(res)
+}
+
+func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
+	}
+
+	res := ctr.usecase.Delete(c.Context(), id)
+	return c.Status(res.Meta.Code).JSON(res)
+}
+{{else}}
+// {{.FeatureName}} godoc
+// @Summary {{.FeatureName}}
+// @Description {{.FeatureName}} endpoint
+// @Tags {{.FeatureNameLower}}
+// @ID {{.FeatureNameLower}}
+// @Produce json
+// @Success 200 {object} models.Response
+// @Router /v1/{{.FeatureNameLower}} [GET]
+func (ctrl *v1Controller) {{.FeatureName}}(c fiber.Ctx) error {
+	res := ctrl.Usecase.{{.FeatureName}}(c.Context())
+	return c.Status(http.StatusOK).JSON(res)
+}
+{{end}}

@@ -112,12 +112,111 @@ func AddFeature(name string) error {
 		return err
 	}
 
-	featureCfg := createFeatureConfig(cfg, name)
-	if err := renderFeatureComponents(featureCfg); err != nil {
+	featureCfg := createFeatureConfig(cfg, name, false)
+	if err := renderDomainComponents(featureCfg); err != nil {
 		return err
 	}
 
 	return registerFeatureInBaseFiles(featureCfg.FeatureName, featureCfg.FeatureNameLower)
+}
+
+func AddCRUD(name, dbType string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	featureCfg := createFeatureConfig(cfg, name, true)
+
+	// Create directories
+	dirs := []string{
+		"repositories",
+		"models",
+		fmt.Sprintf("controllers/v1/%s", featureCfg.FeatureNameLower),
+		fmt.Sprintf("usecases/v1/%s", featureCfg.FeatureNameLower),
+	}
+
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	if err := renderDomainComponents(featureCfg); err != nil {
+		return err
+	}
+
+	return registerCRUDInBaseFiles(featureCfg.FeatureName, featureCfg.FeatureNameLower)
+}
+
+func AddHelper(name string) error {
+	_, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	helperName := strings.ToLower(name)
+	fileName := fmt.Sprintf("helpers/%s.go", helperName)
+
+	if _, err := os.Stat(fileName); err == nil {
+		return fmt.Errorf("helper %s already exists", fileName)
+	}
+
+	content := fmt.Sprintf(`package helpers
+
+import "fmt"
+
+// %s ...
+func %s() {
+	fmt.Println("Hello from %s helper")
+}
+`, strings.Title(helperName), strings.Title(helperName), strings.Title(helperName))
+
+	return os.WriteFile(fileName, []byte(content), 0644)
+}
+
+func renderDomainComponents(cfg featureConfig) error {
+	templates := map[string]string{
+		"templates/domain/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s/controller.go", cfg.FeatureNameLower),
+		"templates/domain/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s/usecase.go", cfg.FeatureNameLower),
+		"templates/domain/repository.go.tmpl": fmt.Sprintf("repositories/%s.go", cfg.FeatureNameLower),
+		"templates/domain/model.go.tmpl":      fmt.Sprintf("models/%s.go", cfg.FeatureNameLower),
+	}
+
+	for tmplPath, destPath := range templates {
+		// Skip repository and model for non-CRUD features if desired
+		if !cfg.IsCRUD && (strings.Contains(tmplPath, "repository") || strings.Contains(tmplPath, "model")) {
+			continue
+		}
+
+		if err := renderAppTemplate(tmplPath, destPath, cfg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func registerCRUDInBaseFiles(name, lower string) error {
+	// Register in router
+	if err := injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]",
+		fmt.Sprintf("\t%sGroup := v1.Group(\"/%s\")\n\t%sGroup.Post(\"/\", ctrl.V1().%s().Create)\n\t%sGroup.Get(\"/:id\", ctrl.V1().%s().Get)\n\t%sGroup.Get(\"/\", ctrl.V1().%s().List)\n\t%sGroup.Put(\"/:id\", ctrl.V1().%s().Update)\n\t%sGroup.Delete(\"/:id\", ctrl.V1().%s().Delete)",
+			lower, lower, lower, name, lower, name, lower, name, lower, name, lower, name)); err != nil {
+		return err
+	}
+
+	// Register in V1 Controller Interface
+	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]",
+		fmt.Sprintf("\t%s() %sController", name, name)); err != nil {
+		return err
+	}
+
+	// Register in V1 Usecase Interface
+	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]",
+		fmt.Sprintf("\t%s() %sUsecase", name, name)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Internal helpers
@@ -126,7 +225,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	// Base directories (always created)
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
-		"routers", "models", "helpers/models", "errorcodes", "docker",
+		"routers", "models", "helpers/models", "errorcodes", "docker", "migrations",
 	}
 
 	for _, dir := range baseDirs {
@@ -212,15 +311,14 @@ func getBaseTemplates() map[string]string {
 		"templates/base/routers/router.go.tmpl":               "routers/main.go",
 		"templates/base/helpers/middleware.go.tmpl":           "helpers/middleware.go",
 		"templates/base/helpers/logger.go.tmpl":               "helpers/logger.go",
-		"templates/base/helpers/gorm_logger.go.tmpl":          "helpers/gorm_logger.go",
 		"templates/base/controllers/controller.go.tmpl":       "controllers/controller.go",
 		"templates/base/controllers/v1/v1_controller.go.tmpl": "controllers/v1/controller.go",
 		"templates/base/usecases/v1/usecase.go.tmpl":          "usecases/v1/usecase.go",
 		"templates/base/configs/config.go.tmpl":               "configs/config.go",
-		"templates/base/helpers/meta_helpers.go.tmpl":         "helpers/meta.go",
-		"templates/base/helpers/hc_helpers.go.tmpl":           "helpers/hc.go",
-		"templates/base/helpers/error_helpers.go.tmpl":        "helpers/error.go",
-		"templates/base/helpers/general_helpers.go.tmpl":      "helpers/general.go",
+		"templates/base/helpers/hc_helpers.go.tmpl":           "helpers/health.go",
+		"templates/base/helpers/utils.go.tmpl":                "helpers/utils.go",
+		"templates/base/helpers/auth.go.tmpl":                 "helpers/auth.go",
+		"templates/base/helpers/http.go.tmpl":                 "helpers/http.go",
 		"templates/base/infra/Makefile.tmpl":                  "Makefile",
 		"templates/base/docker/Dockerfile.tmpl":               "docker/Dockerfile",
 		"templates/base/docker/docker-compose.yml.tmpl":       "docker/docker-compose.yml",
@@ -286,35 +384,43 @@ type featureConfig struct {
 	ProjectName      string
 	FeatureName      string
 	FeatureNameLower string
+	IsCRUD           bool
 }
 
-func createFeatureConfig(cfg *Config, name string) featureConfig {
+func createFeatureConfig(cfg *Config, name string, isCRUD bool) featureConfig {
 	return featureConfig{
 		ProjectName:      cfg.ProjectName,
 		FeatureName:      strings.Title(name),
 		FeatureNameLower: strings.ToLower(name),
+		IsCRUD:           isCRUD,
 	}
 }
 
-func renderFeatureComponents(cfg featureConfig) error {
-	templates := map[string]string{
-		"templates/features/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s.go", cfg.FeatureNameLower),
-		"templates/features/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s.go", cfg.FeatureNameLower),
-		"templates/features/model.go.tmpl":      fmt.Sprintf("models/%s.go", cfg.FeatureNameLower),
-	}
-
-	for tmplPath, destPath := range templates {
-		if err := renderAppTemplate(tmplPath, destPath, cfg); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+// Remove renderFeatureComponents as it is superseded by renderDomainComponents
 
 func registerFeatureInBaseFiles(name, lower string) error {
+	// Updated to point to the new location if we changed directory structure for basic features
+	// If we use v1/name/controller.go, the import path in router might change or usage might change.
+	// But Fiber router just calls the handler.
+	// We need to ensure the Controller initialization in main/wire/controller.go is correct.
+
+	// Assuming standard Clean Architecture with V1Controller struct in base/controllers/v1/controller.go
+	// The original `feature` generator added methods to `v1Controller`.
+	// The `crud` generator added interfaces.
+	// We should probably standardize.
+	// For "AddFeature" (Basic), we used to add method to v1Controller.
+	// For "AddCRUD", we injected interface fields.
+
+	// Let's keep `AddFeature` simple: Add method to `v1Controller`.
+	// renderDomainComponents uses templates/domain/controller.go.tmpl
+
 	if err := injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]", fmt.Sprintf("\tv1.Get(\"/%s\", ctrl.V1().%s)", lower, name)); err != nil {
 		return err
 	}
+	// Note: Basic feature adds method to V1Controller interface/struct directly in templates?
+	// No, the template defines `func (ctrl *v1Controller) {{.FeatureName}}`.
+	// So we need to add the signature to the interface.
+
 	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name)); err != nil {
 		return err
 	}

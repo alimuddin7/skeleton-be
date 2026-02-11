@@ -15,11 +15,16 @@ import (
 
 type PostgreDatabase interface {
 	HealthCheck(ctx context.Context) hModels.DataHealthCheck
+	GetDB() *gorm.DB
 }
 
 type postgreDatabase struct {
 	Db   *gorm.DB
 	Logs zerolog.Logger
+}
+
+func (p *postgreDatabase) GetDB() *gorm.DB {
+	return p.Db
 }
 
 func InitializePostgreDatabase(conn *gorm.DB, log zerolog.Logger) PostgreDatabase {

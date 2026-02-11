@@ -1,0 +1,19 @@
+package models
+
+import (
+	"time"
+	"gorm.io/gorm"
+)
+
+type {{.FeatureName}} struct {
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	Name      string         `json:"name"`
+	// Add other fields here
+}
+
+func ({{.FeatureName}}) TableName() string {
+	return "{{.FeatureNameLower}}s"
+}

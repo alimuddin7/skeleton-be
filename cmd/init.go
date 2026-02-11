@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"skeleton-be/internal/generator"
+
+	"github.com/alimuddin7/skeleton-be/internal/generator"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"

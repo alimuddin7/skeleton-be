@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"skeleton-be/cmd"
+
+	"github.com/alimuddin7/skeleton-be/cmd"
 )
 
 func main() {

@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"skeleton-be/internal/generator"
+
+	"github.com/alimuddin7/skeleton-be/internal/generator"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
@@ -67,8 +68,55 @@ var addHostCmd = &cobra.Command{
 	},
 }
 
+var addCrudCmd = &cobra.Command{
+	Use:   "crud [name]",
+	Short: "Add a new CRUD feature (Controller, Usecase, Repos, Models)",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+		dbType, _ := cmd.Flags().GetString("db")
+
+		// If dbType is not provided, try to detect or ask
+		if dbType == "" {
+			dbSelect := promptui.Select{
+				Label: "Select Database",
+				Items: []string{"mysql", "postgresql"},
+			}
+			_, dbType, _ = dbSelect.Run()
+		}
+
+		fmt.Printf("Generating CRUD feature for %s using %s...\n", name, dbType)
+		err := generator.AddCRUD(name, dbType)
+		if err != nil {
+			fmt.Printf("Failed to generate CRUD feature: %v\n", err)
+			return
+		}
+		fmt.Printf("CRUD Feature %s generated and registered successfully!\n", name)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(addCmd)
 	addCmd.AddCommand(addRouteCmd)
 	addCmd.AddCommand(addHostCmd)
+	addCmd.AddCommand(addCrudCmd)
+	addCrudCmd.Flags().String("db", "", "Database type (mysql, postgresql)")
+
+	addCmd.AddCommand(addHelperCmd)
+}
+
+var addHelperCmd = &cobra.Command{
+	Use:   "helper [name]",
+	Short: "Add a new helper function stub",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+		fmt.Printf("Generating helper %s...\n", name)
+		err := generator.AddHelper(name)
+		if err != nil {
+			fmt.Printf("Failed to generate helper: %v\n", err)
+			return
+		}
+		fmt.Printf("Helper %s generated successfully!\n", name)
+	},
 }

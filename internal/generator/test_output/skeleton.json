@@ -1,0 +1,10 @@
+{
+  "projectName": "test_output",
+  "serviceCode": "01",
+  "database": "",
+  "projectType": "Backend",
+  "modules": [
+    "mysql"
+  ],
+  "hosts": []
+}

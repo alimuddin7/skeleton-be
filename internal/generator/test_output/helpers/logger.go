@@ -1,0 +1,108 @@
+package helpers
+
+import (
+	"context"
+	"errors"
+	"os"
+	"strings"
+	"time"
+
+	"test_output/configs"
+	"test_output/constants"
+
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
+	"gorm.io/gorm/utils"
+)
+
+// InitializeZeroLogs initializes the application logger
+func InitializeZeroLogs() zerolog.Logger {
+	output := os.Stdout
+	// Add file based logging logic if needed (from configs)
+	
+	logger := zerolog.New(output).With().Timestamp().Str("service", configs.Cfg.General.ServiceName).Logger()
+	return logger
+}
+
+// GormLoggerOptions configuration for GormLogger
+type GormLoggerOptions struct {
+	Logger                    zerolog.Logger
+	LogLevel                  gormlogger.LogLevel
+	IgnoreRecordNotFoundError bool
+	SlowThreshold             time.Duration
+}
+
+// GormLogger implementation of gorm.Logger using zerolog
+type GormLogger struct {
+	GormLoggerOptions
+}
+
+// NewGormLogger creates a new GormLogger instance
+func NewGormLogger(opts GormLoggerOptions) *GormLogger {
+	l := &GormLogger{GormLoggerOptions: opts}
+	if l.LogLevel == 0 {
+		l.LogLevel = gormlogger.Silent
+	}
+	return l
+}
+
+// LogMode sets the log level
+func (l *GormLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
+	newlogger := *l
+	newlogger.LogLevel = level
+	return &newlogger
+}
+
+// Info logs info messages
+func (l *GormLogger) Info(ctx context.Context, s string, args ...interface{}) {
+	if l.LogLevel >= gormlogger.Info {
+		l.Logger.Info().Ctx(ctx).Msgf(s, args...)
+	}
+}
+
+// Warn logs warning messages
+func (l *GormLogger) Warn(ctx context.Context, s string, args ...interface{}) {
+	if l.LogLevel >= gormlogger.Warn {
+		l.Logger.Warn().Ctx(ctx).Msgf(s, args...)
+	}
+}
+
+// Error logs error messages
+func (l *GormLogger) Error(ctx context.Context, s string, args ...interface{}) {
+	if l.LogLevel >= gormlogger.Error {
+		l.Logger.Error().Ctx(ctx).Msgf(s, args...)
+	}
+}
+
+// Trace logs SQL queries
+func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
+	if l.LogLevel <= gormlogger.Silent {
+		return
+	}
+
+	elapsed := time.Since(begin)
+	sql, rows := fc()
+
+	fields := make(map[string]interface{})
+	fields["REF_FILE"] = utils.FileWithLineNum()
+	fields["QUERY"] = strings.ReplaceAll(sql, `"`, ``)
+	fields["DURATION"] = elapsed.Milliseconds()
+	
+	if rows == -1 {
+		fields["ROW_AFFECTED"] = "-"
+	} else {
+		fields["ROW_AFFECTED"] = rows
+	}
+
+	switch {
+	case err != nil && (!errors.Is(err, gorm.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError) && l.LogLevel >= gormlogger.Error:
+		fields["ERROR"] = err.Error()
+		l.Logger.Error().Ctx(ctx).Any("GORM", fields).Msg(constants.LOG_QUERY)
+	case l.SlowThreshold != 0 && elapsed > l.SlowThreshold && l.LogLevel >= gormlogger.Warn:
+		fields["WARNING"] = "SLOW SQL"
+		l.Logger.Warn().Ctx(ctx).Any("GORM", fields).Msg(constants.LOG_QUERY)
+	case l.LogLevel == gormlogger.Info:
+		l.Logger.Info().Ctx(ctx).Any("GORM", fields).Msg(constants.LOG_QUERY)
+	}
+}

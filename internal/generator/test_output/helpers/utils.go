@@ -1,0 +1,214 @@
+package helpers
+
+import (
+	"fmt"
+	"math"
+	"math/big"
+	"os"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
+	"test_output/helpers/models"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
+	"github.com/leekchan/accounting"
+	"github.com/rs/zerolog/log"
+)
+
+// --- General Utils Section ---
+
+// PrintHeader prints the name of the calling function
+func PrintHeader() {
+	pc, _, _, _ := runtime.Caller(1)
+	fmt.Printf("<======> %s <======>\n", runtime.FuncForPC(pc).Name())
+}
+
+// LoadEnv loads environment variables from .env file
+func LoadEnv() {
+	if err := godotenv.Load(); err != nil {
+		log.Warn().Msg("No .env file found, loading from system environment")
+	}
+}
+
+// GetEnv retrieves an environment variable or panics if not found (unless optional)
+func GetEnv(key string, fallback ...string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	
+	if len(fallback) > 0 {
+		return fallback[0]
+	}
+
+	log.Fatal().Msgf("Environment variable %s not found", key)
+	return ""
+}
+
+// DiffTime calculates the difference between two times
+func DiffTime(a, b time.Time) string {
+	var age string
+	locTime := b.In(a.Location())
+	_, zoneOffset := locTime.Zone()
+	b = locTime.Add(-time.Duration(zoneOffset) * time.Second)
+
+	if a.After(b) {
+		a, b = b, a
+	}
+
+	diff := math.RoundToEven(b.Sub(a).Hours())
+	day := int64(diff / 24)
+	hour := int(diff) % 24
+
+	if day == 0 {
+		age = fmt.Sprintf("%v hours", hour)
+	} else {
+		age = fmt.Sprintf("%v days %v hours", day, hour)
+	}
+
+	return age
+}
+
+// ConvertStringToDate parses a string to a time.Time object
+func ConvertStringToDate(s, layoutISO string) (time.Time, error) {
+	t, err := time.Parse(layoutISO, s)
+	if err != nil {
+		return t, err
+	}
+	return t, nil
+}
+
+// CheckArray checks if a string exists in a slice of strings
+func CheckArray(data string, arrayCheck []string) bool {
+	for _, v := range arrayCheck {
+		if v == data {
+			return true
+		}
+	}
+	return false
+}
+
+// GetCurrency formats a float as currency (IDR)
+func GetCurrency(current float64) string {
+	ac := accounting.Accounting{Symbol: "Rp. ", Precision: 2, Thousand: ".", Decimal: ","}
+	data := big.NewFloat(current)
+	return ac.FormatMoneyBigFloat(data)
+}
+
+// ArrayStringToArrayInt converts a slice of strings to a slice of ints
+func ArrayStringToArrayInt(data []string) ([]int, error) {
+	var result []int
+	for _, v := range data {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return result, err
+		}
+		result = append(result, i)
+	}
+	return result, nil
+}
+
+// TrimZero trims trailing zeros
+func TrimZero(data string) string {
+	return strings.TrimRight(data, "0")
+}
+
+// SimiliarTo prepares a string for SQL LIKE query
+func SimiliarTo(data []string) string {
+	if len(data) == 0 {
+		return "%"
+	}
+	return "(" + strings.Join(data, "|") + ")%"
+}
+
+// UniqueArray returns unique elements from a slice of strings
+func UniqueArray(data []string) []string {
+	m := make(map[string]bool)
+	for _, v := range data {
+		m[v] = true
+	}
+	var result []string
+	for k := range m {
+		result = append(result, k)
+	}
+	return result
+}
+
+// BeginningOfMonth returns the first day of the month
+func BeginningOfMonth(date time.Time) time.Time {
+	return date.AddDate(0, 0, -date.Day()+1)
+}
+
+// EndOfMonth returns the last day of the month
+func EndOfMonth(date time.Time) time.Time {
+	return date.AddDate(0, 1, -date.Day())
+}
+
+// HandleNan handles NaN (Not a Number) float values
+func HandleNan(data float64) float64 {
+	if math.IsNaN(data) {
+		return 0
+	}
+	return data
+}
+
+// RoundFloat rounds a float to a specific precision
+func RoundFloat(input float64, precision int) float64 {
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(input*ratio) / ratio
+}
+
+// --- Pagination Section ---
+
+// Pagination calculates pagination details
+func Pagination(page, limit int, totalData int64) *models.Page {
+	var prevPage, nextPage int
+	var pagination models.Page
+
+	pagination.CurrentPage = page
+
+	if page > 1 && totalData > 0 {
+		prevPage = page - 1
+		pagination.PreviousPage = prevPage
+	}
+
+	if int64(page*limit) < totalData {
+		nextPage = page + 1
+		pagination.NextPage = nextPage
+	}
+
+	return &pagination
+}
+
+// --- Validator Section ---
+
+// ErrorValidator translates validation errors into a friendly string
+func ErrorValidator(err error) string {
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		var errorMessages []string
+		for _, e := range validationErrors {
+			var message string
+			switch e.Tag() {
+			case "required":
+				message = "Tidak Boleh Kosong"
+			case "numeric":
+				message = "Harus Berupa Angka"
+			case "ne":
+				message = "Karakter Tidak Diperbolehkan"
+			case "email":
+				message = "Format Email Salah"
+			case "min":
+				message = fmt.Sprintf("Minimal %s Karakter", e.Param())
+			case "max":
+				message = fmt.Sprintf("Maksimal %s Karakter", e.Param())
+			default:
+				message = "Input Tidak Valid"
+			}
+			errorMessages = append(errorMessages, fmt.Sprintf("%s %s", e.Field(), message))
+		}
+		return strings.Join(errorMessages, ", ")
+	}
+	return err.Error()
+}

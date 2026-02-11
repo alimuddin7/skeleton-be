@@ -15,11 +15,16 @@ import (
 
 type MysqlDatabase interface {
 	HealthCheck(ctx context.Context) hModels.DataHealthCheck
+	GetDB() *gorm.DB
 }
 
 type mysqlDatabase struct {
 	Db   *gorm.DB
 	Logs zerolog.Logger
+}
+
+func (m *mysqlDatabase) GetDB() *gorm.DB {
+	return m.Db
 }
 
 func InitializeMysqlDatabase(conn *gorm.DB, log zerolog.Logger) MysqlDatabase {

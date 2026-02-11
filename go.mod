@@ -1,4 +1,4 @@
-module skeleton-be
+module github.com/alimuddin7/skeleton-be
 
 go 1.25.6
 

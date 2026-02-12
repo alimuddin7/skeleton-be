@@ -1,16 +1,22 @@
-version: '3.8'
+version: '3.2'
 services:
   {{.ProjectName}}:
     build: 
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: {{.ProjectName}}:latest
-    container_name: {{.ProjectName}}
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ANDROMEDA_USERNAME: 
+        ANDROMEDA_TOKEN:
+        SERVICE_NAME:
+    image: docker-regis.ottodigital.id/dev/-/{{.ProjectName}}:latest
+    container_name: CODE_{{.ProjectName}}
     ports:
       - "7878:7878"
     env_file:
-      - ../.env
+      - ./.env
+    network_mode: bridge
     restart: unless-stopped
     volumes:
-      - ../errorcodes.json:/app/errorcodes.json
-      - ../logs/:/app/logs/
+      - ./errorcodes.json:/app/errorcodes.json
+      - ./errorcodes/:/app/errorcodes/
+      - ./logs/:/app/logs/

@@ -17,7 +17,9 @@ type Config struct {
 		SetMode    string `envconfig:"ROUTER_SETMODE" default:"debug"`
 		MaxTimeout string `envconfig:"MAX_TIMEOUT" default:"30s"`
 	}
+	{{if .Hosts}}
 	Hosts     Hosts     `envconfig:"HOSTS"`
+	{{end}}
 	{{if .Modules}}
 	Database struct {
 		{{range .Modules}}
@@ -44,11 +46,13 @@ type Config struct {
 	{{end}}
 }
 
+{{if .Hosts}}
 type Hosts struct {
 	{{range .Hosts}}
 	{{. | title}} {{. | title}}Host `envconfig:"{{. | upper}}"`
 	{{end}}
 }
+{{end}}
 
 {{range .Hosts}}
 type {{. | title}}Host struct {

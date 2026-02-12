@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-//go:embed templates/*
+//go:embed templates
 var templateFS embed.FS
 
 type Config struct {

@@ -1,0 +1,31 @@
+###############################################
+#                    Build                    #
+###############################################
+
+.build:
+  stage: build
+  only:
+    refs:
+      - tags
+    variables:
+      - $CI_COMMIT_TAG =~ /^[Dd]ev-*/
+      - $CI_COMMIT_TAG =~ /^[Ss]tg-*/
+      - $CI_COMMIT_TAG =~ /^[Pp]tr-*/
+
+build:
+  extends:
+    - .build
+  script:
+    - cp ./docker/Dockerfile ./Dockerfile
+    - |
+      if [[ $CI_COMMIT_TAG == *"tr-"* ]]; then
+          cp ./docker/docker-compose-prod.yml ./docker-compose.yml
+      elif [[ $CI_COMMIT_TAG == *"tg-"* ]]; then
+          cp ./docker/docker-compose-stg.yml ./docker-compose.yml
+      else 
+          cp ./docker/docker-compose.yml ./docker-compose.yml
+      fi
+
+    - |
+      docker-compose -f docker-compose.yml build
+      docker-compose -f docker-compose.yml push

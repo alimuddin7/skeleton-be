@@ -1,9 +1,8 @@
 package controllers
 
 import (
-	"{{.ProjectName}}/helpers/models"
+	"{{.ProjectName}}/models"
 	{{if .IsCRUD}}
-	dm "{{.ProjectName}}/models"
 	"{{.ProjectName}}/usecases/v1"
 	"strconv"
 	{{else}}
@@ -33,7 +32,7 @@ func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.Featur
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
-	var req dm.{{.FeatureName}}
+	var req models.{{.FeatureName}}
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
@@ -66,7 +65,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
 	}
 
-	var req dm.{{.FeatureName}}
+	var req models.{{.FeatureName}}
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}

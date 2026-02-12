@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -40,4 +42,12 @@ func Execute() error {
 
 func init() {
 	// Root flags if any
+	rootCmd.PersistentFlags().Bool("h", false, "display help")
+
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		if h, _ := cmd.Flags().GetBool("h"); h {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }

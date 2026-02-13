@@ -17,8 +17,14 @@ type Config struct {
 		SetMode    string `envconfig:"ROUTER_SETMODE" default:"debug"`
 		MaxTimeout string `envconfig:"MAX_TIMEOUT" default:"30s"`
 	}
+	{{if .Hosts}}
 	Hosts     Hosts     `envconfig:"HOSTS"`
+<<<<<<< HEAD
 	{{- if .Modules}}
+=======
+	{{end}}
+	{{if .Modules}}
+>>>>>>> ef9e5363f3dfb9797b0d266c4d2c2fe02c5bb6cb
 	Database struct {
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}
@@ -62,11 +68,13 @@ type Config struct {
 	{{- end}}
 }
 
+{{if .Hosts}}
 type Hosts struct {
 	{{- range .Hosts}}
 	{{. | title}} {{. | title}}Host `envconfig:"{{. | upper}}"`
 	{{- end}}
 }
+{{end}}
 
 {{- range .Hosts}}
 type {{. | title}}Host struct {

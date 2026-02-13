@@ -24,6 +24,13 @@ type Config struct {
 }
 
 func Generate(destDir string, cfg Config) error {
+	fmt.Printf("[DEBUG] Generate called with destDir=%s\n", destDir)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		fmt.Printf("[DEBUG] Failed to create project directory: %v\n", err)
+		return fmt.Errorf("error creating project directory %s: %v", destDir, err)
+	}
+	fmt.Printf("[DEBUG] Project directory created: %s\n", destDir)
+
 	if err := createDirectoryStructure(destDir, cfg); err != nil {
 		return err
 	}
@@ -225,11 +232,14 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	// Base directories (always created)
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
-		"routers", "models", "helpers/models", "errorcodes", "docker", "migrations",
+		"routers", "models", "errorcodes", "docker", "migrations", "helpers", ".gitlab", ".gitlab/ci", ".gitlab/script",
 	}
 
 	for _, dir := range baseDirs {
-		if err := os.MkdirAll(filepath.Join(destDir, dir), 0755); err != nil {
+		target := filepath.Join(destDir, dir)
+		fmt.Printf("[DEBUG] Creating base directory: %s\n", target)
+		if err := os.MkdirAll(target, 0755); err != nil {
+			fmt.Printf("[DEBUG] Failed to create base directory %s: %v\n", target, err)
 			return err
 		}
 	}
@@ -303,29 +313,35 @@ func isModulePresent(cfg *Config, module string) bool {
 
 func getBaseTemplates() map[string]string {
 	return map[string]string{
-		"templates/base/main.go.tmpl":                         "main.go",
-		"templates/base/go.mod.tmpl":                          "go.mod",
-		"templates/base/constants/constants.go.tmpl":          "constants/general.go",
-		"templates/base/helpers/models/models.go.tmpl":        "helpers/models/meta.go",
-		"templates/base/helpers/models/log_models.go.tmpl":    "helpers/models/log.go",
-		"templates/base/routers/router.go.tmpl":               "routers/main.go",
-		"templates/base/helpers/middleware.go.tmpl":           "helpers/middleware.go",
-		"templates/base/helpers/logger.go.tmpl":               "helpers/logger.go",
-		"templates/base/controllers/controller.go.tmpl":       "controllers/controller.go",
-		"templates/base/controllers/v1/v1_controller.go.tmpl": "controllers/v1/controller.go",
-		"templates/base/usecases/v1/usecase.go.tmpl":          "usecases/v1/usecase.go",
-		"templates/base/configs/config.go.tmpl":               "configs/config.go",
-		"templates/base/helpers/hc_helpers.go.tmpl":           "helpers/health.go",
-		"templates/base/helpers/utils.go.tmpl":                "helpers/utils.go",
-		"templates/base/helpers/auth.go.tmpl":                 "helpers/auth.go",
-		"templates/base/helpers/http.go.tmpl":                 "helpers/http.go",
-		"templates/base/infra/Makefile.tmpl":                  "Makefile",
-		"templates/base/docker/Dockerfile.tmpl":               "docker/Dockerfile",
-		"templates/base/docker/docker-compose.yml.tmpl":       "docker/docker-compose.yml",
-		"templates/base/configs/env.tmpl":                     ".env.example",
-		"templates/base/infra/gitlab-ci.yml.tmpl":             ".gitlab-ci.yml",
-		"templates/base/errorcodes/errorcodes.json.tmpl":      "errorcodes.json",
-		"templates/base/errorcodes/errorcodes_en.json.tmpl":   "errorcodes/errorcodes-en.json",
+		"templates/base/main.go.tmpl":                               "main.go",
+		"templates/base/go.mod.tmpl":                                "go.mod",
+		"templates/base/constants/constants.go.tmpl":                "constants/general.go",
+		"templates/base/helpers/models/models.go.tmpl":              "models/meta.go",
+		"templates/base/helpers/models/log_models.go.tmpl":          "models/log.go",
+		"templates/base/routers/router.go.tmpl":                     "routers/main.go",
+		"templates/base/helpers/middleware.go.tmpl":                 "helpers/middleware.go",
+		"templates/base/helpers/logger.go.tmpl":                     "helpers/logger.go",
+		"templates/base/controllers/controller.go.tmpl":             "controllers/controller.go",
+		"templates/base/controllers/v1/v1_controller.go.tmpl":       "controllers/v1/controller.go",
+		"templates/base/usecases/v1/usecase.go.tmpl":                "usecases/v1/usecase.go",
+		"templates/base/configs/config.go.tmpl":                     "configs/config.go",
+		"templates/base/helpers/hc_helpers.go.tmpl":                 "helpers/health.go",
+		"templates/base/helpers/utils.go.tmpl":                      "helpers/utils.go",
+		"templates/base/helpers/auth.go.tmpl":                       "helpers/auth.go",
+		"templates/base/helpers/http.go.tmpl":                       "helpers/http.go",
+		"templates/base/infra/Makefile.tmpl":                        "Makefile",
+		"templates/base/docker/Dockerfile.tmpl":                     "docker/Dockerfile",
+		"templates/base/docker/docker-compose.yml.tmpl":             "docker/docker-compose.yml",
+		"templates/base/docker/docker-compose-prod.yml.tmpl":        "docker/docker-compose-prod.yml",
+		"templates/base/docker/docker-compose-stg.yml.tmpl":         "docker/docker-compose-stg.yml",
+		"templates/base/configs/env.tmpl":                           ".env.example",
+		"templates/base/infra/gitlab-ci.yml.tmpl":                   ".gitlab-ci.yml",
+		"templates/base/gitlab/ci/build.gitlab-ci.yml.tmpl":         ".gitlab/ci/build.gitlab-ci.yml",
+		"templates/base/gitlab/ci/deploy.gitlab-ci.yml.tmpl":        ".gitlab/ci/deploy.gitlab-ci.yml",
+		"templates/base/gitlab/ci/sonar-scanner.gitlab-ci.yml.tmpl": ".gitlab/ci/sonar-scanner.gitlab-ci.yml",
+		"templates/base/gitlab/script/command.sh.tmpl":              ".gitlab/script/command.sh",
+		"templates/base/errorcodes/errorcodes.json.tmpl":            "errorcodes.json",
+		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
 	}
 }
 
@@ -445,7 +461,15 @@ func injectBelowMarker(filePath, marker, code string) error {
 func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 	content, err := templateFS.ReadFile(tmplPath)
 	if err != nil {
-		return fmt.Errorf("error reading embedded template %s: %v", tmplPath, err)
+		// Try to list the directory to see what's there
+		dir := filepath.Dir(tmplPath)
+		entries, _ := templateFS.ReadDir(dir)
+		var files []string
+		for _, e := range entries {
+			files = append(files, e.Name())
+		}
+		fmt.Printf("Error reading embedded template %s: %v. Available files in %s: %v\n", tmplPath, err, dir, files)
+		return fmt.Errorf("error reading embedded template %s: %v. Available files in %s: %v", tmplPath, err, dir, files)
 	}
 
 	tmpl, err := template.New(filepath.Base(tmplPath)).Funcs(template.FuncMap{
@@ -475,5 +499,17 @@ func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 		return fmt.Errorf("error executing template %s: %v", tmplPath, err)
 	}
 
-	return os.WriteFile(destPath, buf.Bytes(), 0644)
+	dirToCreate := filepath.Dir(destPath)
+	fmt.Printf("[DEBUG] renderAppTemplate: writing to %s, ensuring dir %s exists\n", destPath, dirToCreate)
+	if err := os.MkdirAll(dirToCreate, 0755); err != nil {
+		fmt.Printf("[DEBUG] Failed to create parent directory %s: %v\n", dirToCreate, err)
+		return fmt.Errorf("error creating directory for %s: %v", destPath, err)
+	}
+
+	if err := os.WriteFile(destPath, buf.Bytes(), 0644); err != nil {
+		fmt.Printf("[DEBUG] Failed to write file %s: %v\n", destPath, err)
+		return fmt.Errorf("error writing to %s: %v", destPath, err)
+	}
+	fmt.Printf("[DEBUG] Successfully wrote file: %s\n", destPath)
+	return nil
 }

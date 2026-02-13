@@ -8,7 +8,7 @@ services:
         ANDROMEDA_USERNAME: 
         ANDROMEDA_TOKEN:
         SERVICE_NAME:
-    image: docker-regis.ottodigital.id/dev/-/{{.ProjectName}}:latest
+    image: docker-regis.ottodigital.id/prod/-/{{.ProjectName}}:${CI_COMMIT_TAG}
     container_name: CODE_{{.ProjectName}}
     ports:
       - "7878:7878"

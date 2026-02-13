@@ -19,12 +19,8 @@ type Config struct {
 	}
 	{{if .Hosts}}
 	Hosts     Hosts     `envconfig:"HOSTS"`
-<<<<<<< HEAD
+
 	{{- if .Modules}}
-=======
-	{{end}}
-	{{if .Modules}}
->>>>>>> ef9e5363f3dfb9797b0d266c4d2c2fe02c5bb6cb
 	Database struct {
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}

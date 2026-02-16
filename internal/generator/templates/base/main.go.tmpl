@@ -109,16 +109,16 @@ func main() {
 
 	controller := controllers.InitializeController(v1Controller, logger)
 
-	{{- if or (eq .ProjectType "Backend") (eq .ProjectType "Publisher")}}
+	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	app := routers.InitializeRouter(controller, logger)
 	{{- end}}
 
-	{{- if eq .ProjectType "Scheduler"}}
+	{{- if has .ProjectTypes "Scheduler"}}
 	// Initialize and Start Scheduler
 	scheduler.InitializeScheduler(v1Usecase, logger).StartScheduler()
 	{{- end}}
 
-	{{- if eq .ProjectType "gRPC"}}
+	{{- if has .ProjectTypes "gRPC"}}
 	// Initialize and Start gRPC Server
 	{{- range .Modules}}
 	{{- if eq . "grpc-server"}}
@@ -128,11 +128,11 @@ func main() {
 	{{- end}}
 	{{- end}}
 
-	{{- if eq .ProjectType "Publisher"}}
+	{{- if has .ProjectTypes "Publisher"}}
 	// Publisher-specific initialization if needed
 	{{- end}}
 
-	{{- if eq .ProjectType "Worker"}}
+	{{- if has .ProjectTypes "Worker"}}
 	// Start Worker/Consumer loop
 	// Example: go v1Usecase.StartConsumer()
 	{{- end}}
@@ -140,7 +140,7 @@ func main() {
 	ctx := context.Background()
 	logger.Info().Ctx(ctx).Msg("Finish Initializing")
 
-	{{- if or (eq .ProjectType "Backend") (eq .ProjectType "Publisher")}}
+	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	// Start Server (Backend and Publisher usually expose an API)
 	go func() {
 		if err := app.Listen(fmt.Sprintf("%s:%s", configs.Cfg.Server.Address, configs.Cfg.Server.Port)); err != nil {
@@ -156,13 +156,13 @@ func main() {
 
 	logger.Info().Ctx(ctx).Msg("Shutting down server...")
 
-	{{- if or (eq .ProjectType "Backend") (eq .ProjectType "Publisher")}}
+	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	if err := app.Shutdown(); err != nil {
 		logger.Error().Ctx(ctx).Err(err).Msg("Server forced to shutdown")
 	}
 	{{- end}}
 
-	{{- if eq .ProjectType "gRPC"}}
+	{{- if has .ProjectTypes "gRPC"}}
 	{{- range .Modules}}
 	{{- if eq . "grpc-server"}}
 	gs.Stop()

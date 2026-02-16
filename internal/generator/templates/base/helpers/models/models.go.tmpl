@@ -25,6 +25,7 @@ type ErrorCodeElement struct {
 }
 
 type DataHealthCheck struct {
-	Name   string `json:"name"`
-	Status bool   `json:"status"`
+	ServiceName    string `json:"name"`
+	StatusCode     int    `json:"status_code"`
+	AdditionalData string `json:"additional_data,omitempty"`
 }

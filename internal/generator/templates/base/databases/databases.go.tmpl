@@ -2,100 +2,164 @@ package databases
 
 import (
 	"github.com/rs/zerolog"
-	{{range .Modules}}
-	{{if eq . "mysql"}}"{{$.ProjectName}}/databases/mysql"{{end}}
-	{{if eq . "postgresql"}}"{{$.ProjectName}}/databases/postgre"{{end}}
-	{{if eq . "redis"}}"{{$.ProjectName}}/databases/redis"{{end}}
-	{{if eq . "kafka"}}"{{$.ProjectName}}/databases/kafka"{{end}}
-	{{if eq . "nats"}}"{{$.ProjectName}}/databases/nats"{{end}}
-	{{if eq . "minio"}}"{{$.ProjectName}}/databases/minio"{{end}}
-	{{if eq . "redis-cluster"}}rediscluster "{{$.ProjectName}}/databases/redis_cluster"{{end}}
-	{{end}}
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	"{{$.ProjectName}}/databases/mysql"
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	"{{$.ProjectName}}/databases/postgre"
+	{{- end}}
+	{{- if eq . "redis"}}
+	"{{$.ProjectName}}/databases/redis"
+	{{- end}}
+	{{- if eq . "kafka"}}
+	"{{$.ProjectName}}/databases/kafka"
+	{{- end}}
+	{{- if eq . "nats"}}
+	"{{$.ProjectName}}/databases/nats"
+	{{- end}}
+	{{- if eq . "minio"}}
+	"{{$.ProjectName}}/databases/minio"
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	rediscluster "{{$.ProjectName}}/databases/redis_cluster"
+	{{- end}}
+	{{- end}}
 )
 
 type Database interface {
-	{{range .Modules}}
-	{{if eq . "mysql"}}GetMysql() mysql.MysqlDatabase{{end}}
-	{{if eq . "postgresql"}}GetPostgre() postgre.PostgreDatabase{{end}}
-	{{if eq . "redis"}}GetRedis() redis.RedisDatabase{{end}}
-	{{if eq . "kafka"}}GetKafka() kafka.KafkaDatabase{{end}}
-	{{if eq . "nats"}}GetNats() nats.NatsDatabase{{end}}
-	{{if eq . "minio"}}GetMinio() minio.MinioDatabase{{end}}
-	{{if eq . "redis-cluster"}}GetRedisCluster() rediscluster.RedisCluster{{end}}
-	{{end}}
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	GetMysql() mysql.MysqlDatabase
+	{{- else if eq . "postgresql"}}
+	GetPostgre() postgre.PostgreDatabase
+	{{- else if eq . "redis"}}
+	GetRedis() redis.RedisDatabase
+	{{- else if eq . "kafka"}}
+	GetKafka() kafka.KafkaDatabase
+	{{- else if eq . "nats"}}
+	GetNats() nats.NatsDatabase
+	{{- else if eq . "minio"}}
+	GetMinio() minio.MinioDatabase
+	{{- else if eq . "redis-cluster"}}
+	GetRedisCluster() rediscluster.RedisCluster
+	{{- end}}
+	{{- end}}
 }
 
 type database struct {
-	{{range .Modules}}
-	{{if eq . "mysql"}}Mysql mysql.MysqlDatabase{{end}}
-	{{if eq . "postgresql"}}Postgre postgre.PostgreDatabase{{end}}
-	{{if eq . "redis"}}Redis redis.RedisDatabase{{end}}
-	{{if eq . "kafka"}}Kafka kafka.KafkaDatabase{{end}}
-	{{if eq . "nats"}}Nats nats.NatsDatabase{{end}}
-	{{if eq . "minio"}}Minio minio.MinioDatabase{{end}}
-	{{if eq . "redis-cluster"}}RedisCluster rediscluster.RedisCluster{{end}}
-	{{end}}
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	Mysql mysql.MysqlDatabase
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	Postgre postgre.PostgreDatabase
+	{{- end}}
+	{{- if eq . "redis"}}
+	Redis redis.RedisDatabase
+	{{- end}}
+	{{- if eq . "kafka"}}
+	Kafka kafka.KafkaDatabase
+	{{- end}}
+	{{- if eq . "nats"}}
+	Nats nats.NatsDatabase
+	{{- end}}
+	{{- if eq . "minio"}}
+	Minio minio.MinioDatabase
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	RedisCluster rediscluster.RedisCluster
+	{{- end}}
+	{{- end}}
 }
 
 func InitializeDatabase(
-	{{range .Modules}}
-	{{if eq . "mysql"}}mysqlDb mysql.MysqlDatabase,{{end}}
-	{{if eq . "postgresql"}}postgreDb postgre.PostgreDatabase,{{end}}
-	{{if eq . "redis"}}redisDb redis.RedisDatabase,{{end}}
-	{{if eq . "kafka"}}kafkaDb kafka.KafkaDatabase,{{end}}
-	{{if eq . "nats"}}natsDb nats.NatsDatabase,{{end}}
-	{{if eq . "minio"}}minioDb minio.MinioDatabase,{{end}}
-	{{if eq . "redis-cluster"}}redisClusterDb rediscluster.RedisCluster,{{end}}
-	{{end}}
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	mysqlDb mysql.MysqlDatabase,
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	postgreDb postgre.PostgreDatabase,
+	{{- end}}
+	{{- if eq . "redis"}}
+	redisDb redis.RedisDatabase,
+	{{- end}}
+	{{- if eq . "kafka"}}
+	kafkaDb kafka.KafkaDatabase,
+	{{- end}}
+	{{- if eq . "nats"}}
+	natsDb nats.NatsDatabase,
+	{{- end}}
+	{{- if eq . "minio"}}
+	minioDb minio.MinioDatabase,
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	redisClusterDb rediscluster.RedisCluster,
+	{{- end}}
+	{{- end}}
 	l zerolog.Logger,
 ) Database {
 	return &database{
-		{{range .Modules}}
-		{{if eq . "mysql"}}Mysql: mysqlDb,{{end}}
-		{{if eq . "postgresql"}}Postgre: postgreDb,{{end}}
-		{{if eq . "redis"}}Redis: redisDb,{{end}}
-		{{if eq . "kafka"}}Kafka: kafkaDb,{{end}}
-		{{if eq . "nats"}}Nats: natsDb,{{end}}
-		{{if eq . "minio"}}Minio: minioDb,{{end}}
-		{{if eq . "redis-cluster"}}RedisCluster: redisClusterDb,{{end}}
-		{{end}}
+		{{- range .Modules}}
+		{{- if eq . "mysql"}}
+		Mysql: mysqlDb,
+		{{- end}}
+		{{- if eq . "postgresql"}}
+		Postgre: postgreDb,
+		{{- end}}
+		{{- if eq . "redis"}}
+		Redis: redisDb,
+		{{- end}}
+		{{- if eq . "kafka"}}
+		Kafka: kafkaDb,
+		{{- end}}
+		{{- if eq . "nats"}}
+		Nats: natsDb,
+		{{- end}}
+		{{- if eq . "minio"}}
+		Minio: minioDb,
+		{{- end}}
+		{{- if eq . "redis-cluster"}}
+		RedisCluster: redisClusterDb,
+		{{- end}}
+		{{- end}}
 	}
 }
 
-{{range .Modules}}
-{{if eq . "mysql"}}
+{{- range .Modules}}
+{{- if eq . "mysql"}}
 func (d *database) GetMysql() mysql.MysqlDatabase {
 	return d.Mysql
 }
-{{end}}
-{{if eq . "postgresql"}}
+{{- end}}
+{{- if eq . "postgresql"}}
 func (d *database) GetPostgre() postgre.PostgreDatabase {
 	return d.Postgre
 }
-{{end}}
-{{if eq . "redis"}}
+{{- end}}
+{{- if eq . "redis"}}
 func (d *database) GetRedis() redis.RedisDatabase {
 	return d.Redis
 }
-{{end}}
-{{if eq . "kafka"}}
+{{- end}}
+{{- if eq . "kafka"}}
 func (d *database) GetKafka() kafka.KafkaDatabase {
 	return d.Kafka
 }
-{{end}}
-{{if eq . "nats"}}
+{{- end}}
+{{- if eq . "nats"}}
 func (d *database) GetNats() nats.NatsDatabase {
 	return d.Nats
 }
-{{end}}
-{{if eq . "minio"}}
+{{- end}}
+{{- if eq . "minio"}}
 func (d *database) GetMinio() minio.MinioDatabase {
 	return d.Minio
 }
-{{end}}
-{{if eq . "redis-cluster"}}
+{{- end}}
+{{- if eq . "redis-cluster"}}
 func (d *database) GetRedisCluster() rediscluster.RedisCluster {
 	return d.RedisCluster
 }
-{{end}}
-{{end}}
+{{- end}}
+{{- end}}

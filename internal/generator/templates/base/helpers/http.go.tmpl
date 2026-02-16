@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"{{.ProjectName}}/constants"
-	"{{.ProjectName}}/models"
+	hModels "{{.ProjectName}}/helpers/models"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
@@ -24,12 +24,12 @@ import (
 // --- Response Formatting Section ---
 
 // ResponseFormatter formats standard API responses
-func ResponseFormatter(c fiber.Ctx, code int, message string, data interface{}, meta *models.Meta) error {
-	res := models.Response{
-		Meta: models.MetaResponse{
-			Code:    code,
+func ResponseFormatter(c fiber.Ctx, code int, message string, data interface{}, meta *hModels.MetaData) error {
+	res := hModels.Response{
+		Meta: hModels.MetaData{
+			Code:    fmt.Sprintf("%d", code),
+			Title:   http.StatusText(code),
 			Message: message,
-			Status:  http.StatusText(code),
 		},
 		Data: data,
 	}
@@ -164,13 +164,13 @@ func HTTPRequestMultipart(ctx context.Context, method, url string, headers map[s
 // --- Meta / Error Codes Section ---
 
 var (
-	metaData map[string]map[string]models.MetaData
+	metaData map[string]map[string]hModels.MetaData
 	once     sync.Once
 )
 
 func loadErrorCodes() {
 	once.Do(func() {
-		metaData = make(map[string]map[string]models.MetaData)
+		metaData = make(map[string]map[string]hModels.MetaData)
 		
 		// Load from errorcodes directory
 		files, _ := filepath.Glob("errorcodes/errorcodes-*.json")
@@ -185,12 +185,12 @@ func loadErrorCodes() {
 				continue
 			}
 
-			var tempData []models.ErrorCodeElement
+			var tempData []hModels.ErrorCodeElement
 			if err := json.Unmarshal(data, &tempData); err != nil {
 				continue
 			}
 			
-			langMap := make(map[string]models.MetaData)
+			langMap := make(map[string]hModels.MetaData)
 			for _, entry := range tempData {
 				langMap[entry.Key] = entry.Content
 			}
@@ -212,11 +212,11 @@ func extractLanguageCode(filename string) string {
 	return lang
 }
 
-func GetMetaResponse(key string) models.MetaData {
+func GetMetaResponse(key string) hModels.MetaData {
 	return GetNewMetaResponse("en", key)
 }
 
-func GetNewMetaResponse(lang, key string) models.MetaData {
+func GetNewMetaResponse(lang, key string) hModels.MetaData {
 	loadErrorCodes()
 
 	if lang == "" {
@@ -242,7 +242,7 @@ func GetNewMetaResponse(lang, key string) models.MetaData {
 		}
 	}
 
-	return models.MetaData{
+	return hModels.MetaData{
 		Code:    fmt.Sprintf("500%v00", serviceCode),
 		Title:   "Error",
 		Message: fmt.Sprintf("General error (500%v00)", serviceCode),
@@ -250,7 +250,7 @@ func GetNewMetaResponse(lang, key string) models.MetaData {
 }
 
 // MapStatusCode maps meta code to HTTP status code
-func MapStatusCode(metaCode models.MetaData) int {
+func MapStatusCode(metaCode hModels.MetaData) int {
 	switch {
 	case strings.HasPrefix(metaCode.Code, "200"):
 		return http.StatusOK

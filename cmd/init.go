@@ -55,16 +55,18 @@ var initCmd = &cobra.Command{
 		}
 
 		config := generator.Config{
-			ProjectName: projectName,
-			ServiceCode: serviceCode,
-			ProjectType: projectType,
-			Modules:     []string{},
-			Hosts:       []string{},
+			ProjectName:  projectName,
+			ServiceCode:  serviceCode,
+			ProjectTypes: []string{projectType},
+			Modules:      []string{},
+			Hosts:        []string{},
 		}
 
-		// Add scheduler module if project type is Scheduler
-		if projectType == "Scheduler" {
-			config.Modules = append(config.Modules, "scheduler")
+		// Add scheduler module if project type list contains Scheduler
+		for _, pt := range config.ProjectTypes {
+			if pt == "Scheduler" {
+				config.Modules = append(config.Modules, "scheduler")
+			}
 		}
 
 		// Interactive module selection

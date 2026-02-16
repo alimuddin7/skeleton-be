@@ -17,8 +17,9 @@ type Config struct {
 		SetMode    string `envconfig:"ROUTER_SETMODE" default:"debug"`
 		MaxTimeout string `envconfig:"MAX_TIMEOUT" default:"30s"`
 	}
-	{{if .Hosts}}
+	{{- if .Hosts}}
 	Hosts     Hosts     `envconfig:"HOSTS"`
+	{{- end}}
 
 	{{- if .Modules}}
 	Database struct {
@@ -47,7 +48,7 @@ type Config struct {
 		{{- end}}
 	}
 	{{- end}}
-	{{- if eq .ProjectType "Scheduler"}}
+	{{- if has .ProjectTypes "Scheduler"}}
 	Scheduler struct {
 		TaskTime string `envconfig:"SCHEDULER_TASK_TIME" default:"0 0 * * * *"`
 	}

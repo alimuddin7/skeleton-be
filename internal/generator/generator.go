@@ -270,7 +270,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	// Create grpc/pb if any grpc module is present
 	for _, mod := range cfg.Modules {
 		if strings.HasPrefix(mod, "grpc-") {
-			if err := os.MkdirAll(filepath.Join(destDir, "grpc/pb"), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(destDir, "grpc/proto"), 0755); err != nil {
 				return err
 			}
 			break
@@ -343,8 +343,8 @@ func getBaseTemplates() map[string]string {
 		"templates/base/main.go.tmpl":                               "main.go",
 		"templates/base/go.mod.tmpl":                                "go.mod",
 		"templates/base/constants/constants.go.tmpl":                "constants/general.go",
-		"templates/base/helpers/models/models.go.tmpl":              "models/meta.go",
-		"templates/base/helpers/models/log_models.go.tmpl":          "models/log.go",
+		"templates/base/helpers/models/models.go.tmpl":              "helpers/models/meta.go",
+		"templates/base/helpers/models/log_models.go.tmpl":          "helpers/models/log.go",
 		"templates/base/routers/router.go.tmpl":                     "routers/main.go",
 		"templates/base/helpers/middleware.go.tmpl":                 "helpers/middleware.go",
 		"templates/base/helpers/logger.go.tmpl":                     "helpers/logger.go",
@@ -420,7 +420,7 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 	// Add proto template if any grpc module is present
 	for _, mod := range cfg.Modules {
 		if strings.HasPrefix(mod, "grpc-") {
-			templates["templates/modules/service.proto.tmpl"] = "grpc/pb/service.proto"
+			templates["templates/modules/service.proto.tmpl"] = "grpc/proto/service.proto"
 			break
 		}
 	}

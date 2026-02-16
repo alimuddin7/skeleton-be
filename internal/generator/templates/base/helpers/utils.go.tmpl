@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"{{.ProjectName}}/models"
+	hModels "{{.ProjectName}}/helpers/models"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -163,9 +163,9 @@ func RoundFloat(input float64, precision int) float64 {
 // --- Pagination Section ---
 
 // Pagination calculates pagination details
-func Pagination(page, limit int, totalData int64) *models.Page {
+func Pagination(page, limit int, totalData int64) *hModels.Page {
 	var prevPage, nextPage int
-	var pagination models.Page
+	var pagination hModels.Page
 
 	pagination.CurrentPage = page
 

@@ -2,15 +2,29 @@ package databases
 
 import (
 	"github.com/rs/zerolog"
-	{{range .Modules}}
-	{{if eq . "mysql"}}"{{$.ProjectName}}/databases/mysql"{{end}}
-	{{if eq . "postgresql"}}"{{$.ProjectName}}/databases/postgre"{{end}}
-	{{if eq . "redis"}}"{{$.ProjectName}}/databases/redis"{{end}}
-	{{if eq . "kafka"}}"{{$.ProjectName}}/databases/kafka"{{end}}
-	{{if eq . "nats"}}"{{$.ProjectName}}/databases/nats"{{end}}
-	{{if eq . "minio"}}"{{$.ProjectName}}/databases/minio"{{end}}
-	{{if eq . "redis-cluster"}}rediscluster "{{$.ProjectName}}/databases/redis_cluster"{{end}}
-	{{end}}
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	"{{$.ProjectName}}/databases/mysql"
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	"{{$.ProjectName}}/databases/postgre"
+	{{- end}}
+	{{- if eq . "redis"}}
+	"{{$.ProjectName}}/databases/redis"
+	{{- end}}
+	{{- if eq . "kafka"}}
+	"{{$.ProjectName}}/databases/kafka"
+	{{- end}}
+	{{- if eq . "nats"}}
+	"{{$.ProjectName}}/databases/nats"
+	{{- end}}
+	{{- if eq . "minio"}}
+	"{{$.ProjectName}}/databases/minio"
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	rediscluster "{{$.ProjectName}}/databases/redis_cluster"
+	{{- end}}
+	{{- end}}
 )
 
 type Database interface {
@@ -35,37 +49,79 @@ type Database interface {
 
 type database struct {
 	{{- range .Modules}}
-	{{- if eq . "mysql"}}Mysql mysql.MysqlDatabase{{end}}
-	{{- if eq . "postgresql"}}Postgre postgre.PostgreDatabase{{end}}
-	{{- if eq . "redis"}}Redis redis.RedisDatabase{{end}}
-	{{- if eq . "kafka"}}Kafka kafka.KafkaDatabase{{end}}
-	{{- if eq . "nats"}}Nats nats.NatsDatabase{{end}}
-	{{- if eq . "minio"}}Minio minio.MinioDatabase{{end}}
-	{{- if eq . "redis-cluster"}}RedisCluster rediscluster.RedisCluster{{end}}
+	{{- if eq . "mysql"}}
+	Mysql mysql.MysqlDatabase
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	Postgre postgre.PostgreDatabase
+	{{- end}}
+	{{- if eq . "redis"}}
+	Redis redis.RedisDatabase
+	{{- end}}
+	{{- if eq . "kafka"}}
+	Kafka kafka.KafkaDatabase
+	{{- end}}
+	{{- if eq . "nats"}}
+	Nats nats.NatsDatabase
+	{{- end}}
+	{{- if eq . "minio"}}
+	Minio minio.MinioDatabase
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	RedisCluster rediscluster.RedisCluster
+	{{- end}}
 	{{- end}}
 }
 
 func InitializeDatabase(
 	{{- range .Modules}}
-	{{- if eq . "mysql"}}mysqlDb mysql.MysqlDatabase,{{end}}
-	{{- if eq . "postgresql"}}postgreDb postgre.PostgreDatabase,{{end}}
-	{{- if eq . "redis"}}redisDb redis.RedisDatabase,{{end}}
-	{{- if eq . "kafka"}}kafkaDb kafka.KafkaDatabase,{{end}}
-	{{- if eq . "nats"}}natsDb nats.NatsDatabase,{{end}}
-	{{- if eq . "minio"}}minioDb minio.MinioDatabase,{{end}}
-	{{- if eq . "redis-cluster"}}redisClusterDb rediscluster.RedisCluster,{{end}}
+	{{- if eq . "mysql"}}
+	mysqlDb mysql.MysqlDatabase,
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	postgreDb postgre.PostgreDatabase,
+	{{- end}}
+	{{- if eq . "redis"}}
+	redisDb redis.RedisDatabase,
+	{{- end}}
+	{{- if eq . "kafka"}}
+	kafkaDb kafka.KafkaDatabase,
+	{{- end}}
+	{{- if eq . "nats"}}
+	natsDb nats.NatsDatabase,
+	{{- end}}
+	{{- if eq . "minio"}}
+	minioDb minio.MinioDatabase,
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	redisClusterDb rediscluster.RedisCluster,
+	{{- end}}
 	{{- end}}
 	l zerolog.Logger,
 ) Database {
 	return &database{
 		{{- range .Modules}}
-		{{- if eq . "mysql"}}Mysql: mysqlDb,{{end}}
-		{{- if eq . "postgresql"}}Postgre: postgreDb,{{end}}
-		{{- if eq . "redis"}}Redis: redisDb,{{end}}
-		{{- if eq . "kafka"}}Kafka: kafkaDb,{{end}}
-		{{- if eq . "nats"}}Nats: natsDb,{{end}}
-		{{- if eq . "minio"}}Minio: minioDb,{{end}}
-		{{- if eq . "redis-cluster"}}RedisCluster: redisClusterDb,{{end}}
+		{{- if eq . "mysql"}}
+		Mysql: mysqlDb,
+		{{- end}}
+		{{- if eq . "postgresql"}}
+		Postgre: postgreDb,
+		{{- end}}
+		{{- if eq . "redis"}}
+		Redis: redisDb,
+		{{- end}}
+		{{- if eq . "kafka"}}
+		Kafka: kafkaDb,
+		{{- end}}
+		{{- if eq . "nats"}}
+		Nats: natsDb,
+		{{- end}}
+		{{- if eq . "minio"}}
+		Minio: minioDb,
+		{{- end}}
+		{{- if eq . "redis-cluster"}}
+		RedisCluster: redisClusterDb,
+		{{- end}}
 		{{- end}}
 	}
 }

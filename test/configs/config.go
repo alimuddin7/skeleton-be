@@ -17,63 +17,22 @@ type Config struct {
 		SetMode    string `envconfig:"ROUTER_SETMODE" default:"debug"`
 		MaxTimeout string `envconfig:"MAX_TIMEOUT" default:"30s"`
 	}
-	{{- if .Hosts}}
-	Hosts     Hosts     `envconfig:"HOSTS"`
-	{{- end}}
-
-	{{- if .Modules}}
 	Database struct {
-		{{- range .Modules}}
-		{{- if eq . "mysql"}}
 		MySQL      struct { Host string `envconfig:"MYSQL_HOST"`; Port int `envconfig:"MYSQL_PORT"`; User string `envconfig:"MYSQL_USER"`; Pass string `envconfig:"MYSQL_PASS"`; Database string `envconfig:"MYSQL_DB"` }
-		{{- else if eq . "postgresql"}}
 		PostgreSQL struct { Host string `envconfig:"POSTGRE_HOST"`; Port int `envconfig:"POSTGRE_PORT"`; User string `envconfig:"POSTGRE_USER"`; Pass string `envconfig:"POSTGRE_PASS"`; Database string `envconfig:"POSTGRE_DB"`; SSLMode string `envconfig:"POSTGRE_SSL"` }
-		{{- else if eq . "redis"}}
 		Redis      struct { Address string `envconfig:"REDIS_ADDRESS"`; Port int `envconfig:"REDIS_PORT"`; Password string `envconfig:"REDIS_PASSWORD"`; DBType int `envconfig:"REDIS_DB_TYPE"` }
-		{{- else if eq . "kafka"}}
-		Kafka      struct { Address string `envconfig:"KAFKA_ADDRESS"`; GroupID string `envconfig:"KAFKA_GROUP_ID"` }
-		{{- else if eq . "nats"}}
-		Nats       struct { Servers []string `envconfig:"NATS_SERVERS"`; Username string `envconfig:"NATS_USERNAME"`; Password string `envconfig:"NATS_PASSWORD"` }
-		{{- else if eq . "minio"}}
-		Minio      struct { Endpoint string `envconfig:"MINIO_ENDPOINT"`; KeyID string `envconfig:"MINIO_KEY_ID"`; Secret string `envconfig:"MINIO_SECRET"` }
-		{{- else if eq . "redis-cluster"}}
 		RedisCluster struct { Address []string `envconfig:"REDIS_CLUSTER_ADDRESS"`; SlaveAddress []string `envconfig:"REDIS_CLUSTER_SLAVE_ADDRESS"` }
-		{{- end}}
-		{{- end}}
+		Kafka      struct { Address string `envconfig:"KAFKA_ADDRESS"`; GroupID string `envconfig:"KAFKA_GROUP_ID"` }
+		Nats       struct { Servers []string `envconfig:"NATS_SERVERS"`; Username string `envconfig:"NATS_USERNAME"`; Password string `envconfig:"NATS_PASSWORD"` }
+		Minio      struct { Endpoint string `envconfig:"MINIO_ENDPOINT"`; KeyID string `envconfig:"MINIO_KEY_ID"`; Secret string `envconfig:"MINIO_SECRET"` }
 	}
-	{{- end}}
-	{{- if has .ProjectTypes "Scheduler"}}
-	Scheduler struct {
-		TaskTime string `envconfig:"SCHEDULER_TASK_TIME" default:"0 0 * * * *"`
-	}
-	{{- end}}
-	{{- if or (has .Modules "grpc-server") (has .Modules "grpc-client")}}
 	GRPC struct {
-		{{- if has .Modules "grpc-server"}}
 		ServerPort string `envconfig:"GRPC_SERVER_PORT" default:"50051"`
-		{{- end}}
-		{{- if has .Modules "grpc-client"}}
 		ClientAddr string `envconfig:"GRPC_CLIENT_ADDR" default:"localhost:50051"`
-		{{- end}}
 	}
-	{{- end}}
 }
 
-{{if .Hosts}}
-type Hosts struct {
-	{{- range .Hosts}}
-	{{. | title}} {{. | title}}Host `envconfig:"{{. | upper}}"`
-	{{- end}}
-}
-{{end}}
 
-{{- range .Hosts}}
-type {{. | title}}Host struct {
-	Host string `envconfig:"HOST"`
-	Get  string `envconfig:"GET"`
-	Post string `envconfig:"POST"`
-}
-{{- end}}
 
 var Cfg Config
 

@@ -15,12 +15,13 @@ import (
 var templateFS embed.FS
 
 type Config struct {
-	ProjectName string   `json:"projectName"`
-	ServiceCode string   `json:"serviceCode"`
-	Database    string   `json:"database"`
-	ProjectType string   `json:"projectType"`
-	Modules     []string `json:"modules"`
-	Hosts       []string `json:"hosts"`
+	ProjectName  string   `json:"projectName"`
+	ServiceCode  string   `json:"serviceCode"`
+	Database     string   `json:"database"`
+	ProjectTypes []string `json:"projectTypes"`
+	ProjectType  string   `json:"projectType,omitempty"` // Deprecated: use ProjectTypes
+	Modules      []string `json:"modules"`
+	Hosts        []string `json:"hosts"`
 }
 
 func Generate(destDir string, cfg Config) error {
@@ -266,6 +267,16 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 		}
 	}
 
+	// Create grpc/pb if any grpc module is present
+	for _, mod := range cfg.Modules {
+		if strings.HasPrefix(mod, "grpc-") {
+			if err := os.MkdirAll(filepath.Join(destDir, "grpc/pb"), 0755); err != nil {
+				return err
+			}
+			break
+		}
+	}
+
 	// Host directories
 	if len(cfg.Hosts) > 0 {
 		if err := os.MkdirAll(filepath.Join(destDir, "hosts"), 0755); err != nil {
@@ -299,12 +310,28 @@ func loadProjectState(path string) (*Config, error) {
 	if err := json.Unmarshal(b, &cfg); err != nil {
 		return nil, err
 	}
+
+	// Migrate ProjectType to ProjectTypes if needed
+	if cfg.ProjectType != "" && len(cfg.ProjectTypes) == 0 {
+		cfg.ProjectTypes = []string{cfg.ProjectType}
+		cfg.ProjectType = "" // Clear it so it's not saved back in new format
+	}
+
 	return &cfg, nil
 }
 
 func isModulePresent(cfg *Config, module string) bool {
 	for _, m := range cfg.Modules {
 		if m == module {
+			return true
+		}
+	}
+	return false
+}
+
+func isProjectTypePresent(cfg Config, pType string) bool {
+	for _, t := range cfg.ProjectTypes {
+		if t == pType {
 			return true
 		}
 	}
@@ -358,8 +385,8 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 		templates["templates/base/databases/databases.go.tmpl"] = "databases/database.go"
 	}
 
-	// Add scheduler.go.tmpl only if project type is Scheduler
-	if cfg.ProjectType == "Scheduler" {
+	// Add scheduler.go.tmpl only if project type list contains Scheduler
+	if isProjectTypePresent(cfg, "Scheduler") {
 		templates["templates/base/scheduler/scheduler.go.tmpl"] = "scheduler/scheduler.go"
 	}
 
@@ -387,6 +414,14 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 				tmplName = "postgre"
 			}
 			templates[fmt.Sprintf("templates/modules/%s.go.tmpl", tmplName)] = dest
+		}
+	}
+
+	// Add proto template if any grpc module is present
+	for _, mod := range cfg.Modules {
+		if strings.HasPrefix(mod, "grpc-") {
+			templates["templates/modules/service.proto.tmpl"] = "grpc/pb/service.proto"
+			break
 		}
 	}
 

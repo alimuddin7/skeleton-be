@@ -2,12 +2,11 @@ package grpcclient
 
 import (
 	"context"
-	"{{.ProjectName}}/configs"
+	"test/configs"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	// pb "{{.ProjectName}}/grpc/pb"
 )
 
 type GrpcClient interface {

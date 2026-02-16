@@ -1,0 +1,28 @@
+###############################################
+#                Build for dev                #
+###############################################
+
+.deploy:
+  stage: deploy
+  only:
+    refs:
+      - tags
+    variables:
+      - $CI_COMMIT_TAG =~ /^[Dd]ev-*/
+      - $CI_COMMIT_TAG =~ /^[Ss]tg-*/
+
+deploy:
+  extends:
+    - .deploy
+  script:
+    - chmod +x .gitlab/script/command.sh
+    - |
+      if [[ $CI_COMMIT_TAG == *"tg-"* ]]; then
+        PORT_SERVER=$PORT_SERVER_STG
+      else
+        PORT_SERVER=$PORT_SERVER_DEV
+      fi
+    - .gitlab/script/command.sh "deploy_1"
+    - if [ -d "$CI_PROJECT_DIR/docker/" ]; then DOCKER_DIR="/docker"; fi
+    - .gitlab/script/command.sh "deploy_2"
+    - .gitlab/script/command.sh "deploy_3"

@@ -1,0 +1,79 @@
+module test
+
+go 1.23
+
+require (
+	github.com/google/uuid v1.6.0
+	github.com/rs/zerolog v1.33.0
+	gorm.io/gorm v1.25.10
+	github.com/joho/godotenv v1.5.1
+	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
+	golang.org/x/crypto v0.23.0
+	github.com/go-playground/validator/v10 v10.20.0
+	github.com/leekchan/accounting v1.0.0
+	
+	gorm.io/driver/mysql v1.5.6
+	
+	
+	
+	
+	
+	
+	
+	gorm.io/driver/postgres v1.5.7
+	
+	
+	
+	
+	
+	
+	
+	github.com/redis/go-redis/v9 v9.5.1
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	github.com/confluentinc/confluent-kafka-go v1.9.2
+	
+	
+	
+	
+	
+	
+	
+	github.com/nats-io/nats.go v1.35.0
+	
+	
+	
+	
+	
+	
+	
+	github.com/minio/minio-go/v7 v7.0.70
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+)

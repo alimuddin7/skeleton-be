@@ -1,0 +1,26 @@
+[
+  {
+    "key": "success",
+    "content": {
+      "code": "200?00",
+      "title": "Success",
+      "message": "Successful"
+    }
+  },
+  {
+    "key": "general_error",
+    "content": {
+      "code": "500?00",
+      "title": "Error",
+      "message": "General error occured"
+    }
+  },
+  {
+    "key": "unauthorized",
+    "content": {
+      "code": "401?00",
+      "title": "Error",
+      "message": "Unauthorized"
+    }
+  }
+]

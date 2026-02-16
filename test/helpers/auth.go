@@ -1,0 +1,98 @@
+package helpers
+
+import (
+	"errors"
+	"strings"
+	"time"
+
+
+	"test/configs"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// --- Auth Section ---
+
+// Authenticate verifies if the encrypted password matches the provided password
+func Authenticate(encryptedPassword, reqPassword string) bool {
+	if err := bcrypt.CompareHashAndPassword([]byte(encryptedPassword), []byte(reqPassword)); err != nil {
+		return false
+	}
+	return true
+}
+
+// HashPassword hashes a password using bcrypt
+func HashPassword(reqPassword string) string {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(reqPassword), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(hashedPassword)
+}
+
+// GetAuthToken extracts the Bearer token from the request header
+func GetAuthToken(header string) (string, bool) {
+	if strings.TrimSpace(header) == "" {
+		return "", false
+	}
+
+	if !strings.HasPrefix(header, "Bearer ") {
+		return "", false
+	}
+
+	token := strings.TrimPrefix(header, "Bearer ")
+	return token, true
+}
+
+// --- JWT Section ---
+
+// JWTCustomClaims structure for JWT
+type JWTCustomClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+// GenerateJWT generates a new JWT token
+func GenerateJWT(username string) (string, int64, error) {
+	nowTime := time.Now()
+	expireTime := nowTime.Add(time.Hour * 6)
+	expiredAt := expireTime.Unix()
+
+	claims := JWTCustomClaims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expireTime),
+			Issuer:    "test",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	t, err := token.SignedString([]byte(configs.Cfg.General.SecretKey))
+	if err != nil {
+		return "", 0, err
+	}
+
+	return t, expiredAt, nil
+}
+
+// ParseJWT parses and validates a JWT token
+func ParseJWT(tokenString string) (*JWTCustomClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(configs.Cfg.General.SecretKey), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*JWTCustomClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid token")
+}

@@ -1,0 +1,20 @@
+{
+  "projectName": "test",
+  "serviceCode": "00",
+  "database": "",
+  "projectTypes": [
+    "Backend"
+  ],
+  "modules": [
+    "mysql",
+    "postgresql",
+    "redis",
+    "redis-cluster",
+    "kafka",
+    "nats",
+    "minio",
+    "grpc-server",
+    "grpc-client"
+  ],
+  "hosts": []
+}

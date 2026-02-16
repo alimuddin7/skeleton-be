@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"{{.ProjectName}}/configs"
-	"{{.ProjectName}}/usecases/v1"
+	"test/configs"
+	"test/usecases/v1"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
@@ -25,7 +25,7 @@ type grpcServer struct {
 
 func InitializeGrpcServer(u usecases.Usecase, l zerolog.Logger) GrpcServer {
 	s := grpc.NewServer()
-	// pb.Register{{.ProjectName | title}}ServiceServer(s, &yourServer{Usecase: u})
+	// proto.RegisterYourServiceServer(s, &yourServer{Usecase: u})
 	reflection.Register(s)
 	
 	return &grpcServer{

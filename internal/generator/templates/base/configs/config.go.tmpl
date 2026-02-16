@@ -9,6 +9,7 @@ import (
 type Config struct {
 	General struct {
 		ServiceName string `envconfig:"SERVICE_NAME" required:"true"`
+		SecretKey   string `envconfig:"SECRET_KEY" required:"true"`
 	}
 	Server struct {
 		Address    string `envconfig:"ROUTER_SERVER_ADDRESS" default:"0.0.0.0"`

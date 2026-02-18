@@ -1,105 +1,105 @@
-package databases
+package repositories
 
 import (
 	"github.com/rs/zerolog"
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	"{{$.ProjectName}}/databases/mysql"
+	"{{$.ProjectName}}/repositories/mysql"
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	"{{$.ProjectName}}/databases/postgre"
+	"{{$.ProjectName}}/repositories/postgre"
 	{{- end}}
 	{{- if eq . "redis"}}
-	"{{$.ProjectName}}/databases/redis"
+	"{{$.ProjectName}}/repositories/redis"
 	{{- end}}
 	{{- if eq . "kafka"}}
-	"{{$.ProjectName}}/databases/kafka"
+	"{{$.ProjectName}}/repositories/kafka"
 	{{- end}}
 	{{- if eq . "nats"}}
-	"{{$.ProjectName}}/databases/nats"
+	"{{$.ProjectName}}/repositories/nats"
 	{{- end}}
 	{{- if eq . "minio"}}
-	"{{$.ProjectName}}/databases/minio"
+	"{{$.ProjectName}}/repositories/minio"
 	{{- end}}
 	{{- if eq . "redis-cluster"}}
-	rediscluster "{{$.ProjectName}}/databases/redis_cluster"
+	rediscluster "{{$.ProjectName}}/repositories/redis_cluster"
 	{{- end}}
 	{{- end}}
 )
 
-type Database interface {
+type Repository interface {
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	GetMysql() mysql.MysqlDatabase
+	GetMysql() mysql.MysqlRepository
 	{{- else if eq . "postgresql"}}
-	GetPostgre() postgre.PostgreDatabase
+	GetPostgre() postgre.PostgreRepository
 	{{- else if eq . "redis"}}
-	GetRedis() redis.RedisDatabase
+	GetRedis() redis.RedisRepository
 	{{- else if eq . "kafka"}}
-	GetKafka() kafka.KafkaDatabase
+	GetKafka() kafka.KafkaRepository
 	{{- else if eq . "nats"}}
-	GetNats() nats.NatsDatabase
+	GetNats() nats.NatsRepository
 	{{- else if eq . "minio"}}
-	GetMinio() minio.MinioDatabase
+	GetMinio() minio.MinioRepository
 	{{- else if eq . "redis-cluster"}}
-	GetRedisCluster() rediscluster.RedisCluster
+	GetRedisCluster() rediscluster.RedisClusterRepository
 	{{- end}}
 	{{- end}}
 }
 
-type database struct {
+type repository struct {
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	Mysql mysql.MysqlDatabase
+	Mysql mysql.MysqlRepository
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	Postgre postgre.PostgreDatabase
+	Postgre postgre.PostgreRepository
 	{{- end}}
 	{{- if eq . "redis"}}
-	Redis redis.RedisDatabase
+	Redis redis.RedisRepository
 	{{- end}}
 	{{- if eq . "kafka"}}
-	Kafka kafka.KafkaDatabase
+	Kafka kafka.KafkaRepository
 	{{- end}}
 	{{- if eq . "nats"}}
-	Nats nats.NatsDatabase
+	Nats nats.NatsRepository
 	{{- end}}
 	{{- if eq . "minio"}}
-	Minio minio.MinioDatabase
+	Minio minio.MinioRepository
 	{{- end}}
 	{{- if eq . "redis-cluster"}}
-	RedisCluster rediscluster.RedisCluster
+	RedisCluster rediscluster.RedisClusterRepository
 	{{- end}}
 	{{- end}}
 }
 
-func InitializeDatabase(
+func InitializeRepository(
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	mysqlDb mysql.MysqlDatabase,
+	mysqlDb mysql.MysqlRepository,
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	postgreDb postgre.PostgreDatabase,
+	postgreDb postgre.PostgreRepository,
 	{{- end}}
 	{{- if eq . "redis"}}
-	redisDb redis.RedisDatabase,
+	redisDb redis.RedisRepository,
 	{{- end}}
 	{{- if eq . "kafka"}}
-	kafkaDb kafka.KafkaDatabase,
+	kafkaDb kafka.KafkaRepository,
 	{{- end}}
 	{{- if eq . "nats"}}
-	natsDb nats.NatsDatabase,
+	natsDb nats.NatsRepository,
 	{{- end}}
 	{{- if eq . "minio"}}
-	minioDb minio.MinioDatabase,
+	minioDb minio.MinioRepository,
 	{{- end}}
 	{{- if eq . "redis-cluster"}}
-	redisClusterDb rediscluster.RedisCluster,
+	redisClusterDb rediscluster.RedisClusterRepository,
 	{{- end}}
 	{{- end}}
 	l zerolog.Logger,
-) Database {
-	return &database{
+) Repository {
+	return &repository{
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}
 		Mysql: mysqlDb,
@@ -128,37 +128,37 @@ func InitializeDatabase(
 
 {{- range .Modules}}
 {{- if eq . "mysql"}}
-func (d *database) GetMysql() mysql.MysqlDatabase {
+func (d *repository) GetMysql() mysql.MysqlRepository {
 	return d.Mysql
 }
 {{- end}}
 {{- if eq . "postgresql"}}
-func (d *database) GetPostgre() postgre.PostgreDatabase {
+func (d *repository) GetPostgre() postgre.PostgreRepository {
 	return d.Postgre
 }
 {{- end}}
 {{- if eq . "redis"}}
-func (d *database) GetRedis() redis.RedisDatabase {
+func (d *repository) GetRedis() redis.RedisRepository {
 	return d.Redis
 }
 {{- end}}
 {{- if eq . "kafka"}}
-func (d *database) GetKafka() kafka.KafkaDatabase {
+func (d *repository) GetKafka() kafka.KafkaRepository {
 	return d.Kafka
 }
 {{- end}}
 {{- if eq . "nats"}}
-func (d *database) GetNats() nats.NatsDatabase {
+func (d *repository) GetNats() nats.NatsRepository {
 	return d.Nats
 }
 {{- end}}
 {{- if eq . "minio"}}
-func (d *database) GetMinio() minio.MinioDatabase {
+func (d *repository) GetMinio() minio.MinioRepository {
 	return d.Minio
 }
 {{- end}}
 {{- if eq . "redis-cluster"}}
-func (d *database) GetRedisCluster() rediscluster.RedisCluster {
+func (d *repository) GetRedisCluster() rediscluster.RedisClusterRepository {
 	return d.RedisCluster
 }
 {{- end}}

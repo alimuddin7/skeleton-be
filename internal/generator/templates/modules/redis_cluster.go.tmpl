@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type RedisCluster interface {
+type RedisClusterRepository interface {
 	GetQueue(ctx context.Context, d time.Duration, key string) ([]string, error)
 	PushJobRedis(ctx context.Context, key string, value interface{}) error
 	SaveRedisExp(ctx context.Context, exp time.Duration, key string, val interface{}) error
@@ -19,13 +19,13 @@ type RedisCluster interface {
 	HealthCheck(ctx context.Context) hModels.DataHealthCheck
 }
 
-type redisCluster struct {
+type redisClusterRepository struct {
 	Client *redis.ClusterClient
 	Logs   zerolog.Logger
 }
 
-func InitializeRedisCluster(conn *redis.ClusterClient, log zerolog.Logger) RedisCluster {
-	return &redisCluster{
+func InitializeRedisClusterRepository(conn *redis.ClusterClient, log zerolog.Logger) RedisClusterRepository {
+	return &redisClusterRepository{
 		Client: conn,
 		Logs:   log,
 	}
@@ -71,27 +71,27 @@ func ConnectRedisCluster(log zerolog.Logger) *redis.ClusterClient {
 	return client
 }
 
-func (r *redisCluster) GetQueue(ctx context.Context, d time.Duration, key string) ([]string, error) {
+func (r *redisClusterRepository) GetQueue(ctx context.Context, d time.Duration, key string) ([]string, error) {
 	return r.Client.BRPop(ctx, d, key).Result()
 }
 
-func (r *redisCluster) PushJobRedis(ctx context.Context, key string, value interface{}) error {
+func (r *redisClusterRepository) PushJobRedis(ctx context.Context, key string, value interface{}) error {
 	return r.Client.RPush(ctx, key, value).Err()
 }
 
-func (r *redisCluster) SaveRedisExp(ctx context.Context, exp time.Duration, key string, val interface{}) error {
+func (r *redisClusterRepository) SaveRedisExp(ctx context.Context, exp time.Duration, key string, val interface{}) error {
 	return r.Client.Set(ctx, key, val, exp).Err()
 }
 
-func (r *redisCluster) GetRedisKey(ctx context.Context, key string) (string, error) {
+func (r *redisClusterRepository) GetRedisKey(ctx context.Context, key string) (string, error) {
 	return r.Client.Get(ctx, key).Result()
 }
 
-func (r *redisCluster) Increment(ctx context.Context, key string) error {
+func (r *redisClusterRepository) Increment(ctx context.Context, key string) error {
 	return r.Client.Incr(ctx, key).Err()
 }
 
-func (r *redisCluster) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
+func (r *redisClusterRepository) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
 	res := hModels.DataHealthCheck{
 		ServiceName: "Redis Cluster",
 		StatusCode:  200,

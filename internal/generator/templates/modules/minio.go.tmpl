@@ -8,17 +8,17 @@ import (
 )
 
 type (
-	minioDatabase struct {
+	minioRepository struct {
 		Client *minio.Client
 		Logs   zerolog.Logger
 	}
-	MinioDatabase interface {
+	MinioRepository interface {
 		GetClient() *minio.Client
 	}
 )
 
-func InitializeMinioDatabase(client *minio.Client, log zerolog.Logger) MinioDatabase {
-	return &minioDatabase{
+func InitializeMinioRepository(client *minio.Client, log zerolog.Logger) MinioRepository {
+	return &minioRepository{
 		Client: client,
 		Logs:   log,
 	}
@@ -38,6 +38,6 @@ func ConnectMinio(log zerolog.Logger) *minio.Client {
 	return client
 }
 
-func (m *minioDatabase) GetClient() *minio.Client {
+func (m *minioRepository) GetClient() *minio.Client {
 	return m.Client
 }

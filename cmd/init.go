@@ -76,8 +76,8 @@ var initCmd = &cobra.Command{
 			name  string
 			label string
 		}{
-			{"mysql", "Should MySQL database functionality be included?"},
-			{"postgresql", "Should PostgreSQL database functionality be included?"},
+			{"mysql", "Should MySQL repository functionality be included?"},
+			{"postgresql", "Should PostgreSQL repository functionality be included?"},
 			{"redis", "Should Redis standalone functionality be included?"},
 			{"redis-cluster", "Should Redis cluster functionality be included?"},
 			{"kafka", "Should Kafka functionality be included?"},

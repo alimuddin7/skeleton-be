@@ -247,13 +247,13 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 
 	// Module-specific directories
 	moduleDirectories := map[string]string{
-		"mysql":         "databases/mysql",
-		"postgresql":    "databases/postgre",
-		"redis":         "databases/redis",
-		"kafka":         "databases/kafka",
-		"nats":          "databases/nats",
-		"minio":         "databases/minio",
-		"redis-cluster": "databases/redis_cluster",
+		"mysql":         "repositories/mysql",
+		"postgresql":    "repositories/postgre",
+		"redis":         "repositories/redis",
+		"kafka":         "repositories/kafka",
+		"nats":          "repositories/nats",
+		"minio":         "repositories/minio",
+		"redis-cluster": "repositories/redis_cluster",
 		"grpc-server":   "grpc/server",
 		"grpc-client":   "grpc/client",
 		"scheduler":     "scheduler",
@@ -382,7 +382,7 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 		}
 	}
 	if hasDatabase {
-		templates["templates/base/databases/databases.go.tmpl"] = "databases/database.go"
+		templates["templates/base/repositories/repositories.go.tmpl"] = "repositories/repository.go"
 	}
 
 	// Add scheduler.go.tmpl only if project type list contains Scheduler
@@ -397,13 +397,13 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 
 	// Add module-specific templates
 	mapping := map[string]string{
-		"mysql":         "databases/mysql/mysql.go",
-		"postgresql":    "databases/postgre/postgre.go",
-		"redis":         "databases/redis/redis.go",
-		"kafka":         "databases/kafka/kafka.go",
-		"nats":          "databases/nats/nats.go",
-		"minio":         "databases/minio/minio.go",
-		"redis-cluster": "databases/redis_cluster/redis_cluster.go",
+		"mysql":         "repositories/mysql/mysql.go",
+		"postgresql":    "repositories/postgre/postgre.go",
+		"redis":         "repositories/redis/redis.go",
+		"kafka":         "repositories/kafka/kafka.go",
+		"nats":          "repositories/nats/nats.go",
+		"minio":         "repositories/minio/minio.go",
+		"redis-cluster": "repositories/redis_cluster/redis_cluster.go",
 		"grpc-server":   "grpc/server/server.go",
 		"grpc-client":   "grpc/client/client.go",
 	}

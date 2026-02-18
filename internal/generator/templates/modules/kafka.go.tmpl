@@ -7,19 +7,19 @@ import (
 )
 
 type (
-	kafkaDatabase struct {
+	kafkaRepository struct {
 		Consumer *kafka.Consumer
 		Producer *kafka.Producer
 		Logs     zerolog.Logger
 	}
-	KafkaDatabase interface {
+	KafkaRepository interface {
 		GetConsumer() *kafka.Consumer
 		GetProducer() *kafka.Producer
 	}
 )
 
-func InitializeKafkaDatabase(consumer *kafka.Consumer, producer *kafka.Producer, log zerolog.Logger) KafkaDatabase {
-	return &kafkaDatabase{
+func InitializeKafkaRepository(consumer *kafka.Consumer, producer *kafka.Producer, log zerolog.Logger) KafkaRepository {
+	return &kafkaRepository{
 		Consumer: consumer,
 		Producer: producer,
 		Logs:     log,
@@ -54,10 +54,10 @@ func ConnectKafkaWriter(log zerolog.Logger) *kafka.Producer {
 	return p
 }
 
-func (k *kafkaDatabase) GetConsumer() *kafka.Consumer {
+func (k *kafkaRepository) GetConsumer() *kafka.Consumer {
 	return k.Consumer
 }
 
-func (k *kafkaDatabase) GetProducer() *kafka.Producer {
+func (k *kafkaRepository) GetProducer() *kafka.Producer {
 	return k.Producer
 }

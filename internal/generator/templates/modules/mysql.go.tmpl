@@ -13,22 +13,22 @@ import (
 	"time"
 )
 
-type MysqlDatabase interface {
+type MysqlRepository interface {
 	HealthCheck(ctx context.Context) hModels.DataHealthCheck
 	GetDB() *gorm.DB
 }
 
-type mysqlDatabase struct {
+type mysqlRepository struct {
 	Db   *gorm.DB
 	Logs zerolog.Logger
 }
 
-func (m *mysqlDatabase) GetDB() *gorm.DB {
+func (m *mysqlRepository) GetDB() *gorm.DB {
 	return m.Db
 }
 
-func InitializeMysqlDatabase(conn *gorm.DB, log zerolog.Logger) MysqlDatabase {
-	return &mysqlDatabase{
+func InitializeMysqlRepository(conn *gorm.DB, log zerolog.Logger) MysqlRepository {
+	return &mysqlRepository{
 		Db:   conn,
 		Logs: log,
 	}
@@ -53,7 +53,7 @@ func ConnectMysql(log zerolog.Logger) *gorm.DB {
 	return db
 }
 
-func (m *mysqlDatabase) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
+func (m *mysqlRepository) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
 	res := hModels.DataHealthCheck{
 		ServiceName: "MySQL Database",
 		StatusCode:  200,

@@ -10,18 +10,18 @@ import (
 )
 
 type (
-	redisDatabase struct {
+	redisRepository struct {
 		Client *redis.Client
 		Logs   zerolog.Logger
 	}
-	RedisDatabase interface {
+	RedisRepository interface {
 		GetClient() *redis.Client
 		HealthCheck(ctx context.Context) hModels.DataHealthCheck
 	}
 )
 
-func InitializeRedisDatabase(conn *redis.Client, log zerolog.Logger) RedisDatabase {
-	return &redisDatabase{
+func InitializeRedisRepository(conn *redis.Client, log zerolog.Logger) RedisRepository {
+	return &redisRepository{
 		Client: conn,
 		Logs:   log,
 	}
@@ -44,11 +44,11 @@ func ConnectRedis(log zerolog.Logger) *redis.Client {
 	return client
 }
 
-func (r *redisDatabase) GetClient() *redis.Client {
+func (r *redisRepository) GetClient() *redis.Client {
 	return r.Client
 }
 
-func (r *redisDatabase) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
+func (r *redisRepository) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
 	res := hModels.DataHealthCheck{
 		ServiceName: "Redis",
 		StatusCode:  200,

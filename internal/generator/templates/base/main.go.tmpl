@@ -16,31 +16,31 @@ import (
 	v1Usecases "{{.ProjectName}}/usecases/v1"
 
 	{{- if .Modules}}
-	"{{.ProjectName}}/databases"
+	"{{.ProjectName}}/repositories"
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	mysql "{{$.ProjectName}}/databases/mysql"
+	mysql "{{$.ProjectName}}/repositories/mysql"
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	postgre "{{$.ProjectName}}/databases/postgre"
+	postgre "{{$.ProjectName}}/repositories/postgre"
 	{{- end}}
 	{{- if eq . "redis"}}
-	redis "{{$.ProjectName}}/databases/redis"
+	redis "{{$.ProjectName}}/repositories/redis"
 	{{- end}}
 	{{- if eq . "kafka"}}
-	kafka "{{$.ProjectName}}/databases/kafka"
+	kafka "{{$.ProjectName}}/repositories/kafka"
 	{{- end}}
 	{{- if eq . "nats"}}
-	nats "{{$.ProjectName}}/databases/nats"
+	nats "{{$.ProjectName}}/repositories/nats"
 	{{- end}}
 	{{- if eq . "minio"}}
-	minio "{{$.ProjectName}}/databases/minio"
+	minio "{{$.ProjectName}}/repositories/minio"
 	{{- end}}
 	{{- if eq . "grpc-server"}}
 	grpcserver "{{$.ProjectName}}/grpc/server"
 	{{- end}}
 	{{- if eq . "redis-cluster"}}
-	rediscluster "{{$.ProjectName}}/databases/redis_cluster"
+	rediscluster "{{$.ProjectName}}/repositories/redis_cluster"
 	{{- end}}
 	{{- end}}
 	{{- end}}
@@ -57,30 +57,30 @@ func main() {
 	configs.LoadConfig()
 	logger := helpers.InitializeZeroLogs()
 
-	// Initialize Database (Composite)
+	// Initialize Repository (Composite)
 	{{- if .Modules}}
-	db := databases.InitializeDatabase(
+	repo := repositories.InitializeRepository(
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}
-		mysql.InitializeMysqlDatabase(mysql.ConnectMysql(logger), logger),
+		mysql.InitializeMysqlRepository(mysql.ConnectMysql(logger), logger),
 		{{- end}}
 		{{- if eq . "postgresql"}}
-		postgre.InitializePostgreDatabase(postgre.ConnectPostgre(logger), logger),
+		postgre.InitializePostgreRepository(postgre.ConnectPostgre(logger), logger),
 		{{- end}}
 		{{- if eq . "redis"}}
-		redis.InitializeRedisDatabase(redis.ConnectRedis(logger), logger),
+		redis.InitializeRedisRepository(redis.ConnectRedis(logger), logger),
 		{{- end}}
 		{{- if eq . "kafka"}}
-		kafka.InitializeKafkaDatabase(kafka.ConnectKafkaReader(logger), kafka.ConnectKafkaWriter(logger), logger),
+		kafka.InitializeKafkaRepository(kafka.ConnectKafkaReader(logger), kafka.ConnectKafkaWriter(logger), logger),
 		{{- end}}
 		{{- if eq . "nats"}}
-		nats.InitializeNatsDatabase(nats.ConnectNats(logger), logger),
+		nats.InitializeNatsRepository(nats.ConnectNats(logger), logger),
 		{{- end}}
 		{{- if eq . "minio"}}
-		minio.InitializeMinioDatabase(minio.ConnectMinio(logger), logger),
+		minio.InitializeMinioRepository(minio.ConnectMinio(logger), logger),
 		{{- end}}
 		{{- if eq . "redis-cluster"}}
-		rediscluster.InitializeRedisCluster(rediscluster.ConnectRedisCluster(logger), logger),
+		rediscluster.InitializeRedisClusterRepository(rediscluster.ConnectRedisCluster(logger), logger),
 		{{- end}}
 		{{- end}}
 		logger,
@@ -101,7 +101,7 @@ func main() {
 	{{- end}}
 
 	v1Usecase := v1Usecases.InitializeV1Usecase(
-		{{- if .Modules}}db,{{end}}
+		{{- if .Modules}}repo,{{end}}
 		{{- if .Hosts}}host,{{end}}
 		logger,
 	)

@@ -6,7 +6,7 @@ import (
 	hModels "{{.ProjectName}}/helpers/models"
 	"{{.ProjectName}}/helpers"
 	{{- if .Modules}}
-	"{{.ProjectName}}/databases"
+	"{{.ProjectName}}/repositories"
 	{{- end}}
 	{{- if .Hosts}}
 	"{{.ProjectName}}/hosts"
@@ -20,7 +20,7 @@ type Usecase interface {
 
 type usecase struct {
 	{{- if .Modules}}
-	DB databases.Database
+	Repo repositories.Repository
 	{{- end}}
 	{{- if .Hosts}}
 	Host hosts.Host
@@ -30,7 +30,7 @@ type usecase struct {
 
 func InitializeV1Usecase(
 	{{- if .Modules}}
-	db databases.Database,
+	repo repositories.Repository,
 	{{- end}}
 	{{- if .Hosts}}
 	h hosts.Host,
@@ -39,7 +39,7 @@ func InitializeV1Usecase(
 ) Usecase {
 	return &usecase{
 		{{- if .Modules}}
-		DB: db,
+		Repo: repo,
 		{{- end}}
 		{{- if .Hosts}}
 		Host: h,
@@ -52,19 +52,19 @@ func (u *usecase) HealthCheck(ctx context.Context) hModels.Response {
 	var healthChecks []hModels.DataHealthCheck
 	
 	{{- if .Modules}}
-	// Database health checks
+	// Repository health checks
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	healthChecks = append(healthChecks, u.DB.GetMysql().HealthCheck(ctx))
+	healthChecks = append(healthChecks, u.Repo.GetMysql().HealthCheck(ctx))
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	healthChecks = append(healthChecks, u.DB.GetPostgre().HealthCheck(ctx))
+	healthChecks = append(healthChecks, u.Repo.GetPostgre().HealthCheck(ctx))
 	{{- end}}
 	{{- if eq . "redis"}}
-	healthChecks = append(healthChecks, u.DB.GetRedis().HealthCheck(ctx))
+	healthChecks = append(healthChecks, u.Repo.GetRedis().HealthCheck(ctx))
 	{{- end}}
 	{{- if eq . "redis-cluster"}}
-	healthChecks = append(healthChecks, u.DB.GetRedisCluster().HealthCheck(ctx))
+	healthChecks = append(healthChecks, u.Repo.GetRedisCluster().HealthCheck(ctx))
 	{{- end}}
 	{{- end}}
 	{{- end}}

@@ -8,19 +8,19 @@ import (
 )
 
 type (
-	natsDatabase struct {
+	natsRepository struct {
 		Conn *nats.Conn
 		JS   nats.JetStreamContext
 		Logs zerolog.Logger
 	}
-	NatsDatabase interface {
+	NatsRepository interface {
 		GetConn() *nats.Conn
 		GetJS() nats.JetStreamContext
 	}
 )
 
-func InitializeNatsDatabase(nc *nats.Conn, js nats.JetStreamContext, log zerolog.Logger) NatsDatabase {
-	return &natsDatabase{
+func InitializeNatsRepository(nc *nats.Conn, js nats.JetStreamContext, log zerolog.Logger) NatsRepository {
+	return &natsRepository{
 		Conn: nc,
 		JS:   js,
 		Logs: log,
@@ -47,10 +47,10 @@ func ConnectNats(log zerolog.Logger) (*nats.Conn, nats.JetStreamContext) {
 	return nc, js
 }
 
-func (n *natsDatabase) GetConn() *nats.Conn {
+func (n *natsRepository) GetConn() *nats.Conn {
 	return n.Conn
 }
 
-func (n *natsDatabase) GetJS() nats.JetStreamContext {
+func (n *natsRepository) GetJS() nats.JetStreamContext {
 	return n.JS
 }

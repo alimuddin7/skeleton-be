@@ -12,9 +12,12 @@ import (
 	v1Controllers "{{.ProjectName}}/controllers/v1"
 	"{{.ProjectName}}/helpers"
 	"{{.ProjectName}}/routers"
-	"{{.ProjectName}}/scheduler"
+
 	v1Usecases "{{.ProjectName}}/usecases/v1"
 
+	{{- if has .ProjectTypes "Scheduler"}}
+	"{{.ProjectName}}/scheduler"
+	{{- end}}
 	{{- if .Modules}}
 	"{{.ProjectName}}/repositories"
 	{{- range .Modules}}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"{{.ProjectName}}/configs"
 	"{{.ProjectName}}/helpers"
-	"{{.ProjectName}}/helpers/models"
+	"{{.ProjectName}}/dto"
 	"github.com/reiver/go-telnet"
 	"github.com/rs/zerolog"
 )
@@ -20,7 +20,7 @@ type (
 	}
 
 	{{.HostNameTitle}} interface {
-		HealthCheck(ctx context.Context) models.DataHealthCheck
+		HealthCheck(ctx context.Context) dto.DataHealthCheck
 	}
 )
 
@@ -43,9 +43,9 @@ func Initialize{{.HostNameTitle}}(log zerolog.Logger) {{.HostNameTitle}} {
 	return &h
 }
 
-func (h *{{.HostNameLower}}) HealthCheck(ctx context.Context) models.DataHealthCheck {
+func (h *{{.HostNameLower}}) HealthCheck(ctx context.Context) dto.DataHealthCheck {
 	urlSvr := helpers.TelnetIP(h.Host)
-	res := models.DataHealthCheck{
+	res := dto.DataHealthCheck{
 		ServiceName: "{{.HostNameTitle}} (" + urlSvr + ")",
 		StatusCode:  200,
 	}

@@ -1,0 +1,7 @@
+package dto
+
+type DataHealthCheck struct {
+	ServiceName    string `json:"name"`
+	StatusCode     int    `json:"status_code"`
+	AdditionalData string `json:"additional_data,omitempty"`
+}

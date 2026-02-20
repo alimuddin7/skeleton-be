@@ -1,31 +1,8 @@
 package models
 
-type MetaData struct {
-	Code    string `json:"code"`
-	Title   string `json:"title"`
-	Message string `json:"message"`
-}
-
-type Response struct {
-	Data  interface{} `json:"data,omitempty"`
-	Meta  MetaData    `json:"meta"`
-	Count int64       `json:"count,omitempty"`
-	Page  *Page       `json:"page,omitempty"`
-}
-
-type Page struct {
-	CurrentPage  int `json:"curPage,omitempty"`
-	PreviousPage int `json:"prevPage,omitempty"`
-	NextPage     int `json:"nextPage,omitempty"`
-}
+import "{{.ProjectName}}/dto"
 
 type ErrorCodeElement struct {
-	Key     string   `json:"key"`
-	Content MetaData `json:"content"`
-}
-
-type DataHealthCheck struct {
-	ServiceName    string `json:"name"`
-	StatusCode     int    `json:"status_code"`
-	AdditionalData string `json:"additional_data,omitempty"`
+	Key     string       `json:"key"`
+	Content dto.MetaData `json:"content"`
 }

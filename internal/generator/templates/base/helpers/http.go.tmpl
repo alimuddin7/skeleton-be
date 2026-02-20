@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"{{.ProjectName}}/constants"
+	"{{.ProjectName}}/dto"
 	hModels "{{.ProjectName}}/helpers/models"
 
 	"github.com/gofiber/fiber/v3"
@@ -24,27 +26,28 @@ import (
 // --- Response Formatting Section ---
 
 // ResponseFormatter formats standard API responses
-func ResponseFormatter(c fiber.Ctx, code int, message string, data interface{}, meta *hModels.MetaData) error {
-	res := hModels.Response{
-		Meta: hModels.MetaData{
-			Code:    fmt.Sprintf("%d", code),
-			Title:   http.StatusText(code),
-			Message: message,
-		},
-		Data: data,
+func ResponseFormatter(c fiber.Ctx, err error, lang string, count int64, page *dto.Page, data interface{}) error {
+	var res dto.Response
+	var resKey string
+
+	if err != nil {
+		resKey = MapErrorResponse(err)
+	} else {
+		resKey = constants.RES_SUCCESS
+		res.Data = data
+		res.Count = count
+		res.Page = page
 	}
 
-	if meta != nil {
-		res.Meta = *meta
-	}
-	
+	res.Meta = GetNewMetaResponse(lang, resKey)
+
 	// Add trace ID to response header
 	traceID := c.Locals(constants.TRANSACTION_ID)
 	if traceID != nil {
 		c.Set("X-Trace-ID", fmt.Sprintf("%v", traceID))
 	}
 
-	return c.Status(code).JSON(res)
+	return c.Status(MapStatusCode(res.Meta)).JSON(res)
 }
 
 // LogRequest logs the HTTP request details
@@ -164,13 +167,13 @@ func HTTPRequestMultipart(ctx context.Context, method, url string, headers map[s
 // --- Meta / Error Codes Section ---
 
 var (
-	metaData map[string]map[string]hModels.MetaData
+	metaData map[string]map[string]dto.MetaData
 	once     sync.Once
 )
 
 func loadErrorCodes() {
 	once.Do(func() {
-		metaData = make(map[string]map[string]hModels.MetaData)
+		metaData = make(map[string]map[string]dto.MetaData)
 		
 		// Load from errorcodes directory
 		files, _ := filepath.Glob("errorcodes/errorcodes-*.json")
@@ -190,7 +193,7 @@ func loadErrorCodes() {
 				continue
 			}
 			
-			langMap := make(map[string]hModels.MetaData)
+			langMap := make(map[string]dto.MetaData)
 			for _, entry := range tempData {
 				langMap[entry.Key] = entry.Content
 			}
@@ -212,11 +215,11 @@ func extractLanguageCode(filename string) string {
 	return lang
 }
 
-func GetMetaResponse(key string) hModels.MetaData {
+func GetMetaResponse(key string) dto.MetaData {
 	return GetNewMetaResponse("en", key)
 }
 
-func GetNewMetaResponse(lang, key string) hModels.MetaData {
+func GetNewMetaResponse(lang, key string) dto.MetaData {
 	loadErrorCodes()
 
 	if lang == "" {
@@ -242,7 +245,7 @@ func GetNewMetaResponse(lang, key string) hModels.MetaData {
 		}
 	}
 
-	return hModels.MetaData{
+	return dto.MetaData{
 		Code:    fmt.Sprintf("500%v00", serviceCode),
 		Title:   "Error",
 		Message: fmt.Sprintf("General error (500%v00)", serviceCode),
@@ -250,7 +253,7 @@ func GetNewMetaResponse(lang, key string) hModels.MetaData {
 }
 
 // MapStatusCode maps meta code to HTTP status code
-func MapStatusCode(metaCode hModels.MetaData) int {
+func MapStatusCode(metaCode dto.MetaData) int {
 	switch {
 	case strings.HasPrefix(metaCode.Code, "200"):
 		return http.StatusOK
@@ -268,6 +271,26 @@ func MapStatusCode(metaCode hModels.MetaData) int {
 		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
+	}
+}
+
+// MapErrorResponse maps error to response key string
+func MapErrorResponse(err error) string {
+	switch {
+	case errors.Is(err, constants.ERR_CLIENT):
+		return constants.RES_CLIENT_ERROR
+	case errors.Is(err, constants.ERR_VALIDATION):
+		return constants.RES_VALIDATION_ERROR
+	case errors.Is(err, constants.ERR_UNAUTHORIZED):
+		return constants.RES_UNAUTHORIZED_ERROR
+	case errors.Is(err, constants.ERR_FORBIDDEN):
+		return constants.RES_FORBIDDEN_ERROR
+	case errors.Is(err, constants.ERR_NOT_FOUND):
+		return constants.RES_NOT_FOUND_ERROR
+	case errors.Is(err, constants.ERR_GENERAL):
+		return constants.RES_GENERAL_ERROR
+	default:
+		return constants.RES_GENERAL_ERROR
 	}
 }
 

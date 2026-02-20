@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"{{.ProjectName}}/configs"
-	hModels "{{.ProjectName}}/helpers/models"
+	"{{.ProjectName}}/dto"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 )
@@ -16,7 +16,7 @@ type (
 	}
 	RedisRepository interface {
 		GetClient() *redis.Client
-		HealthCheck(ctx context.Context) hModels.DataHealthCheck
+		HealthCheck(ctx context.Context) dto.DataHealthCheck
 	}
 )
 
@@ -48,8 +48,8 @@ func (r *redisRepository) GetClient() *redis.Client {
 	return r.Client
 }
 
-func (r *redisRepository) HealthCheck(ctx context.Context) hModels.DataHealthCheck {
-	res := hModels.DataHealthCheck{
+func (r *redisRepository) HealthCheck(ctx context.Context) dto.DataHealthCheck {
+	res := dto.DataHealthCheck{
 		ServiceName: "Redis",
 		StatusCode:  200,
 	}

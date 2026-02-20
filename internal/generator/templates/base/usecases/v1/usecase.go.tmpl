@@ -3,7 +3,7 @@ package usecases
 import (
 	"context"
 	"github.com/rs/zerolog"
-	hModels "{{.ProjectName}}/helpers/models"
+	"{{.ProjectName}}/dto"
 	"{{.ProjectName}}/helpers"
 	{{- if .Modules}}
 	"{{.ProjectName}}/repositories"
@@ -14,7 +14,7 @@ import (
 )
 
 type Usecase interface {
-	HealthCheck(ctx context.Context) hModels.Response
+	HealthCheck(ctx context.Context) dto.Response
 	// [V1_USECASE_INTERFACE_MARKER]
 }
 
@@ -48,8 +48,8 @@ func InitializeV1Usecase(
 	}
 }
 
-func (u *usecase) HealthCheck(ctx context.Context) hModels.Response {
-	var healthChecks []hModels.DataHealthCheck
+func (u *usecase) HealthCheck(ctx context.Context) dto.Response {
+	var healthChecks []dto.DataHealthCheck
 	
 	{{- if .Modules}}
 	// Repository health checks

@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"{{.ProjectName}}/dto"
+	"{{.ProjectName}}/helpers"
 	"{{.ProjectName}}/models"
 	{{if .IsCRUD}}
 	"{{.ProjectName}}/usecases/v1"
 	"strconv"
-	{{else}}
-	"net/http"
 	{{end}}
 
 	"github.com/gofiber/fiber/v3"
@@ -34,54 +34,54 @@ func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.Featur
 func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
 	var req models.{{.FeatureName}}
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
-	res := ctr.usecase.Create(c.Context(), &req)
-	return c.Status(res.Meta.Code).JSON(res)
+	res, err := ctr.usecase.Create(c.Context(), &req)
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Get(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
+		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
-	res := ctr.usecase.Get(c.Context(), id)
-	return c.Status(res.Meta.Code).JSON(res)
+	res, err := ctr.usecase.Get(c.Context(), id)
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) List(c fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
 
-	res := ctr.usecase.List(c.Context(), page, limit)
-	return c.Status(res.Meta.Code).JSON(res)
+	res, err := ctr.usecase.List(c.Context(), page, limit)
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
+		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
 	var req models.{{.FeatureName}}
 	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
-	res := ctr.usecase.Update(c.Context(), id, &req)
-	return c.Status(res.Meta.Code).JSON(res)
+	res, err := ctr.usecase.Update(c.Context(), id, &req)
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
+		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
-	res := ctr.usecase.Delete(c.Context(), id)
-	return c.Status(res.Meta.Code).JSON(res)
+	res, err := ctr.usecase.Delete(c.Context(), id)
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
 {{else}}
 // {{.FeatureName}} godoc
@@ -90,10 +90,10 @@ func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 // @Tags {{.FeatureNameLower}}
 // @ID {{.FeatureNameLower}}
 // @Produce json
-// @Success 200 {object} models.Response
+// @Success 200 {object} dto.Response
 // @Router /v1/{{.FeatureNameLower}} [GET]
 func (ctrl *v1Controller) {{.FeatureName}}(c fiber.Ctx) error {
-	res := ctrl.Usecase.{{.FeatureName}}(c.Context())
-	return c.Status(http.StatusOK).JSON(res)
+	res, err := ctrl.Usecase.{{.FeatureName}}(c.Context())
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
 {{end}}

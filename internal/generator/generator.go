@@ -477,7 +477,7 @@ func registerFeatureInBaseFiles(name, lower string) error {
 	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name)); err != nil {
 		return err
 	}
-	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) dto.Response", name)); err != nil {
+	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) (dto.Response, error)", name)); err != nil {
 		return err
 	}
 	return nil

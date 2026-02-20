@@ -3,11 +3,11 @@ package controllers
 import (
 	"reflect"
 	"strings"
+	"{{.ProjectName}}/helpers"
 	v1Usecases "{{.ProjectName}}/usecases/v1"
 	"github.com/gofiber/fiber/v3"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
-	"net/http"
 )
 
 type V1Controller interface {
@@ -46,6 +46,6 @@ func CustomValidator() *validator.Validate {
 }
 
 func (ctrl *v1Controller) HealthCheck(c fiber.Ctx) error {
-	res := ctrl.Usecase.HealthCheck(c.Context())
-	return c.Status(http.StatusOK).JSON(res)
+	res, err := ctrl.Usecase.HealthCheck(c.Context())
+	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }

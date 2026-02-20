@@ -2,7 +2,7 @@ package usecases
 
 import (
 	"context"
-	"{{.ProjectName}}/helpers"
+	"{{.ProjectName}}/dto"
 	"{{.ProjectName}}/models"
 	
 	{{if .IsCRUD}}
@@ -14,11 +14,11 @@ import (
 
 {{if .IsCRUD}}
 type {{.FeatureName}}Usecase interface {
-	Create(ctx context.Context, req *models.{{.FeatureName}}) models.Response
-	Get(ctx context.Context, id int) models.Response
-	List(ctx context.Context, page, limit int) models.Response
-	Update(ctx context.Context, id int, req *models.{{.FeatureName}}) models.Response
-	Delete(ctx context.Context, id int) models.Response
+	Create(ctx context.Context, req *models.{{.FeatureName}}) (dto.Response, error)
+	Get(ctx context.Context, id int) (dto.Response, error)
+	List(ctx context.Context, page, limit int) (dto.Response, error)
+	Update(ctx context.Context, id int, req *models.{{.FeatureName}}) (dto.Response, error)
+	Delete(ctx context.Context, id int) (dto.Response, error)
 }
 
 type {{.FeatureNameLower}}Usecase struct {
@@ -33,66 +33,52 @@ func New{{.FeatureName}}Usecase(repo repositories.{{.FeatureName}}Repository, lo
 	}
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *models.{{.FeatureName}}) models.Response {
+func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *models.{{.FeatureName}}) (dto.Response, error) {
 	if err := u.repo.Create(ctx, req); err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to create {{.FeatureNameLower}}")
-		return models.Response{
-			Meta: helpers.GetMetaResponse("general_error"),
-		}
+		return dto.Response{}, err
 	}
 
-	return models.Response{
-		Meta: helpers.GetMetaResponse("success"),
+	return dto.Response{
 		Data: req,
-	}
+	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) models.Response {
+func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Response, error) {
 	data, err := u.repo.Get(ctx, id)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}}")
-		return models.Response{
-			Meta: helpers.GetMetaResponse("general_error"),
-		}
+		return dto.Response{}, err
 	}
 
-	return models.Response{
-		Meta: helpers.GetMetaResponse("success"),
+	return dto.Response{
 		Data: data,
-	}
+	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int) models.Response {
+func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int) (dto.Response, error) {
 	offset := (page - 1) * limit
 	data, count, err := u.repo.List(ctx, limit, offset)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to list {{.FeatureNameLower}}s")
-		return models.Response{
-			Meta: helpers.GetMetaResponse("general_error"),
-		}
+		return dto.Response{}, err
 	}
 
-	totalPages := int(math.Ceil(float64(count) / float64(limit)))
-
-	return models.Response{
-		Meta: helpers.GetMetaResponse("success"),
+	return dto.Response{
 		Data: data,
-		Pagination: &models.Pagination{
-			Page:       page,
-			Limit:      limit,
-			TotalData:  int(count),
-			TotalPages: totalPages,
+		Count: count,
+		Page: &dto.Page{
+			CurrentPage: page,
+			// prev/next calculation can be here or in ResponseFormatter/helpers
 		},
-	}
+	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *models.{{.FeatureName}}) models.Response {
+func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *models.{{.FeatureName}}) (dto.Response, error) {
 	existing, err := u.repo.Get(ctx, id)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}} for update")
-		return models.Response{
-			Meta: helpers.GetMetaResponse("general_error"),
-		}
+		return dto.Response{}, err
 	}
 
 	// Update fields
@@ -101,39 +87,28 @@ func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *
 
 	if err := u.repo.Update(ctx, existing); err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to update {{.FeatureNameLower}}")
-		return models.Response{
-			Meta: helpers.GetMetaResponse("general_error"),
-		}
+		return dto.Response{}, err
 	}
 
-	return models.Response{
-		Meta: helpers.GetMetaResponse("success"),
+	return dto.Response{
 		Data: existing,
-	}
+	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Delete(ctx context.Context, id int) models.Response {
+func (u *{{.FeatureNameLower}}Usecase) Delete(ctx context.Context, id int) (dto.Response, error) {
 	if err := u.repo.Delete(ctx, id); err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to delete {{.FeatureNameLower}}")
-		return models.Response{
-			Meta: helpers.GetMetaResponse("general_error"),
-		}
+		return dto.Response{}, err
 	}
 
-	return models.Response{
-		Meta: helpers.GetMetaResponse("success"),
-	}
+	return dto.Response{}, nil
 }
 {{else}}
-func (u *usecase) {{.FeatureName}}(ctx context.Context) models.Response {
-	res := models.Response{
-		Meta: helpers.GetMetaResponse("general_error"),
-	}
-
+func (u *usecase) {{.FeatureName}}(ctx context.Context) (dto.Response, error) {
 	// Your business logic here
 
-	res.Data = "Welcome to {{.FeatureName}} feature"
-	res.Meta = helpers.GetMetaResponse("success")
-	return res
+	return dto.Response{
+		Data: "Welcome to {{.FeatureName}} feature",
+	}, nil
 }
 {{end}}

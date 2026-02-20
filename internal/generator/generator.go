@@ -369,6 +369,8 @@ func getBaseTemplates() map[string]string {
 		"templates/base/gitlab/script/command.sh.tmpl":              ".gitlab/script/command.sh",
 		"templates/base/errorcodes/errorcodes.json.tmpl":            "errorcodes.json",
 		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
+		"templates/base/dto/response.go.tmpl":                       "dto/response.go",
+		"templates/base/dto/healthcheck.go.tmpl":                    "dto/healthcheck.go",
 	}
 }
 
@@ -475,7 +477,7 @@ func registerFeatureInBaseFiles(name, lower string) error {
 	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name)); err != nil {
 		return err
 	}
-	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) hModels.Response", name)); err != nil {
+	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) (dto.Response, error)", name)); err != nil {
 		return err
 	}
 	return nil

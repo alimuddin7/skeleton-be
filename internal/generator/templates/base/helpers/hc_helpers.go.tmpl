@@ -1,17 +1,11 @@
 package helpers
 
 import (
-	hModels "{{.ProjectName}}/helpers/models"
-	"net/http"
+	"{{.ProjectName}}/dto"
 )
 
-func GenerateResponseHealthCheck(data ...hModels.DataHealthCheck) hModels.Response {
-	return hModels.Response{
-		Meta: hModels.MetaData{
-			Code:    "2000000",
-			Title:   "Available",
-			Message: "Service is available",
-		},
+func GenerateResponseHealthCheck(data ...dto.DataHealthCheck) dto.Response {
+	return dto.Response{
 		Data: data,
 	}
 }

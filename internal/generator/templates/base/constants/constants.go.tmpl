@@ -1,5 +1,7 @@
 package constants
 
+import "errors"
+
 const (
 	SERVICE_CODE = "{{.ServiceCode}}"
 	SERVICE_NAME = "{{.ProjectName}}"
@@ -16,4 +18,25 @@ const (
 	LOG_OTHER = "OTHER_LOGS"
 	LOG_QUERY = "QUERY_LOGS"
     TRANSACTION_ID = "trace_id"
+)
+
+// Map Response
+const (
+	RES_SUCCESS = "success"
+	RES_GENERAL_ERROR = "general_error"
+	RES_CLIENT_ERROR = "client_error"
+	RES_VALIDATION_ERROR = "validation_error"
+	RES_UNAUTHORIZED_ERROR = "unauthorized"
+	RES_FORBIDDEN_ERROR = "forbidden"
+	RES_NOT_FOUND_ERROR = "not_found"
+)
+
+// Map Error
+var (
+	ERR_CLIENT = errors.New("client error")
+	ERR_VALIDATION = errors.New("validation error")
+	ERR_UNAUTHORIZED = errors.New("unauthorized error")
+	ERR_FORBIDDEN = errors.New("forbidden error")
+	ERR_NOT_FOUND = errors.New("not found error")
+	ERR_GENERAL = errors.New("general error")
 )

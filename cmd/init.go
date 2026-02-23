@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 
 	"github.com/alimuddin7/skeleton-be/internal/generator"
 
@@ -132,26 +129,6 @@ var initCmd = &cobra.Command{
 		if err := generator.Generate(config.ProjectName, config); err != nil {
 			fmt.Printf("Generation failed: %v\n", err)
 			return
-		}
-
-		if _, err := os.Stat("skeleton-be"); err == nil {
-			src, err := os.Open("skeleton-be")
-			if err == nil {
-				defer src.Close()
-				dst, err := os.OpenFile(filepath.Join(config.ProjectName, "skeleton-be"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-				if err == nil {
-					defer dst.Close()
-					if _, err := io.Copy(dst, src); err != nil {
-						fmt.Printf("Warning: Failed to copy skeleton binary: %v\n", err)
-					}
-				} else {
-					fmt.Printf("Warning: Failed to create skeleton file: %v\n", err)
-				}
-			} else {
-				fmt.Printf("Warning: Failed to open skeleton source: %v\n", err)
-			}
-
-			fmt.Println("Successfully copy skeleton binary")
 		}
 
 		fmt.Println("Project generated successfully!")

@@ -1,4 +1,4 @@
-package usecases
+package {{.FeatureNameLower}}
 
 import (
 	"context"
@@ -7,8 +7,10 @@ import (
 	{{if .IsCRUD}}
 	"math"
 	"{{.ProjectName}}/repositories"
-	"github.com/rs/zerolog"
 	{{end}}
+	"github.com/rs/zerolog"
+
+	// [V1_USECASE_LOCAL_IMPORT_MARKER]
 )
 
 {{if .IsCRUD}}

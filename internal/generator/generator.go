@@ -224,28 +224,7 @@ func renderDomainComponents(cfg featureConfig) error {
 	return nil
 }
 
-func registerCRUDInBaseFiles(name, lower string) error {
-	// Register in router
-	if err := injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]",
-		fmt.Sprintf("\t%sGroup := v1.Group(\"/%s\")\n\t%sGroup.Post(\"/\", ctrl.V1().%s().Create)\n\t%sGroup.Get(\"/:id\", ctrl.V1().%s().Get)\n\t%sGroup.Get(\"/\", ctrl.V1().%s().List)\n\t%sGroup.Put(\"/:id\", ctrl.V1().%s().Update)\n\t%sGroup.Delete(\"/:id\", ctrl.V1().%s().Delete)",
-			lower, lower, lower, name, lower, name, lower, name, lower, name, lower, name)); err != nil {
-		return err
-	}
-
-	// Register in V1 Controller Interface
-	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]",
-		fmt.Sprintf("\t%s() %sController", name, name)); err != nil {
-		return err
-	}
-
-	// Register in V1 Usecase Interface
-	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]",
-		fmt.Sprintf("\t%s() %sUsecase", name, name)); err != nil {
-		return err
-	}
-
-	return nil
-}
+// registerFeatureInBaseFiles and registerCRUDInBaseFiles are defined below with updated logic.
 
 // Internal helpers
 
@@ -468,34 +447,51 @@ func createFeatureConfig(cfg *Config, name string, isCRUD bool) featureConfig {
 // Remove renderFeatureComponents as it is superseded by renderDomainComponents
 
 func registerFeatureInBaseFiles(name, lower string) error {
-	// Updated to point to the new location if we changed directory structure for basic features
-	// If we use v1/name/controller.go, the import path in router might change or usage might change.
-	// But Fiber router just calls the handler.
-	// We need to ensure the Controller initialization in main/wire/controller.go is correct.
-
-	// Assuming standard Clean Architecture with V1Controller struct in base/controllers/v1/controller.go
-	// The original `feature` generator added methods to `v1Controller`.
-	// The `crud` generator added interfaces.
-	// We should probably standardize.
-	// For "AddFeature" (Basic), we used to add method to v1Controller.
-	// For "AddCRUD", we injected interface fields.
-
-	// Let's keep `AddFeature` simple: Add method to `v1Controller`.
-	// renderDomainComponents uses templates/domain/controller.go.tmpl
-
-	if err := injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]", fmt.Sprintf("\tv1.Get(\"/%s\", ctrl.V1().%s)", lower, name)); err != nil {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
 		return err
 	}
-	// Note: Basic feature adds method to V1Controller interface/struct directly in templates?
-	// No, the template defines `func (ctrl *v1Controller) {{.FeatureName}}`.
-	// So we need to add the signature to the interface.
+	projectName := cfg.ProjectName
 
-	if err := injectBelowMarker("controllers/v1/controller.go", "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name)); err != nil {
+	// 1. Controller Injections
+	ctrlFile := "controllers/v1/controller.go"
+	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_IMPORT_MARKER]", fmt.Sprintf("\t%s \"%s/controllers/v1/%s\"", lower, projectName, lower))
+	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name))
+
+	// 2. Usecase Injections
+	ucFile := "usecases/v1/usecase.go"
+	injectBelowMarker(ucFile, "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) (models.Response, error)", name))
+
+	// 3. Router Injections
+	injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]", fmt.Sprintf("\tv1.Get(\"/%s\", ctrl.V1().%s)", lower, name))
+
+	return nil
+}
+
+func registerCRUDInBaseFiles(name, lower string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
 		return err
 	}
-	if err := injectBelowMarker("usecases/v1/usecase.go", "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) (dto.Response, error)", name)); err != nil {
-		return err
-	}
+	projectName := cfg.ProjectName
+
+	// 1. Controller Injections
+	ctrlFile := "controllers/v1/controller.go"
+	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_IMPORT_MARKER]", fmt.Sprintf("\t%s \"%s/controllers/v1/%s\"", lower, projectName, lower))
+	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s() %s.%sController", name, lower, name))
+	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_IMPL_MARKER]", fmt.Sprintf("\t%sController %s.%sController", name, lower, name))
+
+	// 2. Usecase Injections
+	ucFile := "usecases/v1/usecase.go"
+	injectBelowMarker(ucFile, "// [V1_USECASE_IMPORT_MARKER]", fmt.Sprintf("\t%s \"%s/usecases/v1/%s\"", lower, projectName, lower))
+	injectBelowMarker(ucFile, "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s() %s.%sUsecase", name, lower, name))
+	injectBelowMarker(ucFile, "// [V1_USECASE_IMPL_MARKER]", fmt.Sprintf("\t%sUsecase %s.%sUsecase", name, lower, name))
+
+	// 3. Router Injections
+	injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]",
+		fmt.Sprintf("\t%sGroup := v1.Group(\"/%s\")\n\t%sGroup.Post(\"/\", ctrl.V1().%s().Create)\n\t%sGroup.Get(\"/:id\", ctrl.V1().%s().Get)\n\t%sGroup.Get(\"/\", ctrl.V1().%s().List)\n\t%sGroup.Put(\"/:id\", ctrl.V1().%s().Update)\n\t%sGroup.Delete(\"/:id\", ctrl.V1().%s().Delete)",
+			lower, lower, lower, name, lower, name, lower, name, lower, name, lower, name))
+
 	return nil
 }
 

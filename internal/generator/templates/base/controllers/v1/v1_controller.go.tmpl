@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
+	// [V1_CONTROLLER_IMPORT_MARKER]
 )
 
 type V1Controller interface {
@@ -19,6 +20,7 @@ type v1Controller struct {
 	Usecase   v1Usecases.Usecase
 	Logs      zerolog.Logger
 	Validator *validator.Validate
+	// [V1_CONTROLLER_IMPL_MARKER]
 }
 
 func InitializeV1Controller(usecases v1Usecases.Usecase, l zerolog.Logger) V1Controller {

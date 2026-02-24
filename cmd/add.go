@@ -15,8 +15,8 @@ var addCmd = &cobra.Command{
 }
 
 var addModuleCmd = &cobra.Command{
-	Use:   "module [name]",
-	Short: "Add an infrastructure module (mysql, postgresql, redis, kafka, nats, minio)",
+	Short: "Add an infrastructure module",
+	Long:  "Add infrastructure modules such as mysql, postgresql, redis, redis-cluster, kafka, nats, or minio.",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		module := ""
@@ -42,7 +42,8 @@ var addModuleCmd = &cobra.Command{
 
 var addRouteCmd = &cobra.Command{
 	Use:   "route <name>",
-	Short: "Add a new route/feature stack (Controller, Usecase, Repository, Model)",
+	Short: "Add a basic route/feature stack",
+	Long:  "Generate a basic Controller and Usecase stack for a simple endpoint (e.g. login, health).",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -57,7 +58,8 @@ var addRouteCmd = &cobra.Command{
 
 var addCrudCmd = &cobra.Command{
 	Use:   "crud <name>",
-	Short: "Add a CRUD feature stack (Controller, Usecase, Repository, Model)",
+	Short: "Add a full CRUD stack",
+	Long:  "Generate a complete CRUD stack (Controller, Usecase, Repository, Model, Routes) for an entity (e.g. user, product).",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -82,7 +84,8 @@ var addCrudCmd = &cobra.Command{
 
 var addHostCmd = &cobra.Command{
 	Use:   "host <name>",
-	Short: "Add a new external host integration",
+	Short: "Add an external API host integration",
+	Long:  "Scaffold a client to interact with an external service (e.g. payment-gateway, user-api).",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]

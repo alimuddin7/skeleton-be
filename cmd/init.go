@@ -83,52 +83,68 @@ var initCmd = &cobra.Command{
 			))
 		}
 
-		// Step 5: Additional Modules (optional — can skip by pressing Enter with nothing selected)
-		groups = append(groups, huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Additional Modules").
-				Description("Space to toggle, Enter to confirm. No selection = skip").
-				Options(
-					huh.NewOption("Redis Standalone", "redis"),
-					huh.NewOption("Redis Cluster", "redis-cluster"),
-					huh.NewOption("Kafka", "kafka"),
-					huh.NewOption("NATS", "nats"),
-					huh.NewOption("MinIO", "minio"),
-				).
-				Value(&modules),
-		))
+		// Step 5: Additional Modules
+		if len(modules) == 0 {
+			groups = append(groups, huh.NewGroup(
+				huh.NewMultiSelect[string]().
+					Title("Additional Modules").
+					Description("Space to toggle, Enter to confirm. No selection = skip").
+					Options(
+						huh.NewOption("Redis Standalone", "redis"),
+						huh.NewOption("Redis Cluster", "redis-cluster"),
+						huh.NewOption("Kafka", "kafka"),
+						huh.NewOption("NATS", "nats"),
+						huh.NewOption("MinIO", "minio"),
+					).
+					Value(&modules),
+			))
+		}
 
 		// Step 6: External Hosts / API integration
-		groups = append(groups, huh.NewGroup(
-			huh.NewInput().
-				Title("External API Hosts").
-				Description("Nama host eksternal, pisah koma jika lebih dari satu (e.g. core-payment,user-service). Kosongkan untuk skip").
-				Value(&hostInput),
-		))
+		if hostInput == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("External API Hosts").
+					Description("Nama host eksternal, pisah koma jika lebih dari satu (e.g. core-payment,user-service). Kosongkan untuk skip").
+					Value(&hostInput),
+			))
+		}
 
 		// Step 7: Asynq
-		groups = append(groups, huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Asynq (Background Queue)").
-				Description("Redis-based async job queue").
-				Options(huh.NewOptions("No", "Publisher", "Consumer", "Both")...).
-				Value(&asynq),
-		))
+		fAsynq, _ := cmd.Flags().GetString("asynq")
+		if fAsynq != "" {
+			asynq = fAsynq
+		} else {
+			groups = append(groups, huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Asynq (Background Queue)").
+					Description("Redis-based async job queue").
+					Options(huh.NewOptions("No", "Publisher", "Consumer", "Both")...).
+					Value(&asynq),
+			))
+		}
 
 		// Step 8: gRPC
-		groups = append(groups, huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("gRPC Support").
-				Options(huh.NewOptions("No", "Server", "Client", "Both")...).
-				Value(&grpc),
-		))
+		fGrpc, _ := cmd.Flags().GetString("grpc")
+		if fGrpc != "" {
+			grpc = fGrpc
+		} else {
+			groups = append(groups, huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("gRPC Support").
+					Options(huh.NewOptions("No", "Server", "Client", "Both")...).
+					Value(&grpc),
+			))
+		}
 
-		if err := huh.NewForm(groups...).Run(); err != nil {
-			if err.Error() == "user aborted" {
-				fmt.Println("Cancelled.")
-				return nil
+		if len(groups) > 0 {
+			if err := huh.NewForm(groups...).Run(); err != nil {
+				if err.Error() == "user aborted" {
+					fmt.Println("Cancelled.")
+					return nil
+				}
+				return fmt.Errorf("init cancelled: %w", err)
 			}
-			return fmt.Errorf("init cancelled: %w", err)
 		}
 
 		// Parse hosts
@@ -199,4 +215,8 @@ func init() {
 	initCmd.Flags().StringP("code", "c", "", "Service code (2 digits)")
 	initCmd.Flags().StringP("db", "d", "", "Primary database (mysql, postgresql)")
 	initCmd.Flags().StringP("type", "t", "", "Project type (Backend, Scheduler, Worker, Publisher, gRPC)")
+	initCmd.Flags().StringSliceP("modules", "m", []string{}, "Additional modules (redis, kafka, nats, minio)")
+	initCmd.Flags().StringP("hosts", "H", "", "External API hosts (comma separated)")
+	initCmd.Flags().StringP("asynq", "a", "", "Asynq mode (No, Publisher, Consumer, Both)")
+	initCmd.Flags().StringP("grpc", "g", "", "gRPC mode (No, Server, Client, Both)")
 }

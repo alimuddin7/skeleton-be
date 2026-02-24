@@ -1,4 +1,4 @@
-package controllers
+package {{.FeatureNameLower}}
 
 import (
 	"{{.ProjectName}}/models"
@@ -9,6 +9,8 @@ import (
 	{{end}}
 
 	"github.com/gofiber/fiber/v3"
+
+	// [V1_CONTROLLER_LOCAL_IMPORT_MARKER]
 )
 
 {{if .IsCRUD}}

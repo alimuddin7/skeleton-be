@@ -4,7 +4,7 @@ import (
 	"{{.ProjectName}}/models"
 	"{{.ProjectName}}/helpers"
 	{{if .IsCRUD}}
-	"{{.ProjectName}}/usecases/v1"
+	usecase "{{.ProjectName}}/usecases/v1/{{.FeatureNameLower}}"
 	"strconv"
 	{{end}}
 
@@ -23,10 +23,10 @@ type {{.FeatureName}}Controller interface {
 }
 
 type {{.FeatureNameLower}}Controller struct {
-	usecase usecases.{{.FeatureName}}Usecase
+	usecase usecase.{{.FeatureName}}Usecase
 }
 
-func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.FeatureName}}Controller {
+func New{{.FeatureName}}Controller(u usecase.{{.FeatureName}}Usecase) {{.FeatureName}}Controller {
 	return &{{.FeatureNameLower}}Controller{
 		usecase: u,
 	}
@@ -53,8 +53,14 @@ func (ctr *{{.FeatureNameLower}}Controller) Get(c fiber.Ctx) error {
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) List(c fiber.Ctx) error {
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 10)
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	if limit < 1 {
+		limit = 10
+	}
 
 	res, err := ctr.usecase.List(c.Context(), page, limit)
 	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)

@@ -11,11 +11,17 @@ import (
 	{{- if .Hosts}}
 	"{{.ProjectName}}/hosts"
 	{{- end}}
+	{{- range .Features}}
+	{{.}}Uc "{{$.ProjectName}}/usecases/v1/{{.}}"
+	{{- end}}
 	// [V1_USECASE_IMPORT_MARKER]
 )
 
 type Usecase interface {
 	HealthCheck(ctx context.Context) (models.Response, error)
+	{{- range .Features}}
+	{{. | title}}() {{.}}Uc.{{. | title}}Usecase
+	{{- end}}
 	// [V1_USECASE_INTERFACE_MARKER]
 }
 
@@ -27,6 +33,9 @@ type usecase struct {
 	Host hosts.Host
 	{{- end}}
 	Logs zerolog.Logger
+	{{- range .Features}}
+	{{.}} {{.}}Uc.{{. | title}}Usecase
+	{{- end}}
 	// [V1_USECASE_IMPL_MARKER]
 }
 
@@ -38,6 +47,9 @@ func InitializeV1Usecase(
 	h hosts.Host,
 	{{- end}}
 	l zerolog.Logger,
+	{{- range .Features}}
+	{{.}} {{.}}Uc.{{. | title}}Usecase,
+	{{- end}}
 ) Usecase {
 	return &usecase{
 		{{- if .Modules}}
@@ -47,6 +59,9 @@ func InitializeV1Usecase(
 		Host: h,
 		{{- end}}
 		Logs: l,
+		{{- range .Features}}
+		{{.}}: {{.}},
+		{{- end}}
 	}
 }
 
@@ -80,3 +95,9 @@ func (u *usecase) HealthCheck(ctx context.Context) (models.Response, error) {
 	
 	return helpers.GenerateResponseHealthCheck(healthChecks...), nil
 }
+
+{{- range .Features}}
+func (u *usecase) {{. | title}}() {{.}}Uc.{{. | title}}Usecase {
+	return u.{{.}}
+}
+{{- end}}

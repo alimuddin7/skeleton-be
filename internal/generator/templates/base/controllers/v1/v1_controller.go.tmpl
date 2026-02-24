@@ -8,11 +8,17 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
+	{{- range .Features}}
+	{{.}}Ctrl "{{$.ProjectName}}/controllers/v1/{{.}}"
+	{{- end}}
 	// [V1_CONTROLLER_IMPORT_MARKER]
 )
 
 type V1Controller interface {
 	HealthCheck(c fiber.Ctx) error
+	{{- range .Features}}
+	{{. | title}}() {{.}}Ctrl.{{. | title}}Controller
+	{{- end}}
 	// [V1_CONTROLLER_INTERFACE_MARKER]
 }
 
@@ -20,14 +26,26 @@ type v1Controller struct {
 	Usecase   v1Usecases.Usecase
 	Logs      zerolog.Logger
 	Validator *validator.Validate
+	{{- range .Features}}
+	{{.}} {{.}}Ctrl.{{. | title}}Controller
+	{{- end}}
 	// [V1_CONTROLLER_IMPL_MARKER]
 }
 
-func InitializeV1Controller(usecases v1Usecases.Usecase, l zerolog.Logger) V1Controller {
+func InitializeV1Controller(
+	usecases v1Usecases.Usecase,
+	l zerolog.Logger,
+	{{- range .Features}}
+	{{.}} {{.}}Ctrl.{{. | title}}Controller,
+	{{- end}}
+) V1Controller {
 	return &v1Controller{
 		Usecase:   usecases,
 		Logs:      l,
 		Validator: CustomValidator(),
+		{{- range .Features}}
+		{{.}}: {{.}},
+		{{- end}}
 	}
 }
 
@@ -51,3 +69,9 @@ func (ctrl *v1Controller) HealthCheck(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.HealthCheck(c.Context())
 	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
 }
+
+{{- range .Features}}
+func (ctrl *v1Controller) {{. | title}}() {{.}}Ctrl.{{. | title}}Controller {
+	return ctrl.{{.}}
+}
+{{- end}}

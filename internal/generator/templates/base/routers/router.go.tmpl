@@ -24,6 +24,15 @@ func InitializeRouter(ctrl controllers.Controller, l zerolog.Logger) *fiber.App 
 	
 	v1 := main.Group("/v1")
 	v1.Get("/healthcheck", ctrl.V1().HealthCheck)
+
+	{{- range .Features}}
+	{{.}}Group := v1.Group("/{{.}}")
+	{{.}}Group.Post("/", ctrl.V1().{{. | title}}().Create)
+	{{.}}Group.Get("/:id", ctrl.V1().{{. | title}}().Get)
+	{{.}}Group.Get("/", ctrl.V1().{{. | title}}().List)
+	{{.}}Group.Put("/:id", ctrl.V1().{{. | title}}().Update)
+	{{.}}Group.Delete("/:id", ctrl.V1().{{. | title}}().Delete)
+	{{- end}}
 	// [V1_ROUTES_MARKER]
 
 	return app

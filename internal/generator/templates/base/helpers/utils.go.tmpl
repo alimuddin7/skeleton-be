@@ -160,6 +160,21 @@ func RoundFloat(input float64, precision int) float64 {
 	return math.Round(input*ratio) / ratio
 }
 
+// TelnetIP extracts the host and port from a URL for telnet checks
+func TelnetIP(urlSvr string) string {
+	urlSvr = strings.Replace(urlSvr, "http://", "", -1)
+	urlSvr = strings.Replace(urlSvr, "https://", "", -1)
+	if !strings.Contains(urlSvr, ":") {
+		urlSvr += ":80"
+	}
+	// Remove paths if any
+	parts := strings.Split(urlSvr, "/")
+	if len(parts) > 0 {
+		urlSvr = parts[0]
+	}
+	return urlSvr
+}
+
 // --- Pagination Section ---
 
 // Pagination calculates pagination details

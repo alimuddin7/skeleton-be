@@ -135,22 +135,37 @@ func InitializeApp() *App {
 	{{- end}}
 	// [APP_HOST_INIT_MARKER]
 
-	// --- Usecases ---
+	{{- range .Features}}
+	{{- $dbType := index $.FeatureDBs .}}
+	{{- if eq $dbType "postgresql"}}
+	{{.}}Repo := repositories.New{{. | title}}Repository(repo.GetPostgre().GetDB(), logger)
+	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase({{.}}Repo, logger)
+	{{- else}}
+	{{.}}Repo := repositories.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger)
+	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase({{.}}Repo, logger)
+	{{- end}}
+	{{- end}}
 	v1Usecase := v1Usecases.InitializeV1Usecase(
 		{{- if .Modules}}repo,{{end}}
 		{{- if .Hosts}}host,{{end}}
 		logger,
+		{{- range .Features}}
+		{{.}}Usecase,
+		{{- end}}
 	)
-	{{- range .Features}}
-	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase(repositories.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger), logger)
-	{{- end}}
 	// [APP_USECASE_INIT_MARKER]
 
 	// --- Controllers ---
-	v1Ctrl := v1Controllers.InitializeV1Controller(v1Usecase, logger)
 	{{- range .Features}}
-	_ = {{.}}Ctrl.New{{. | title}}Controller({{.}}Usecase)
+	{{.}}Controller := {{.}}Ctrl.New{{. | title}}Controller({{.}}Usecase)
 	{{- end}}
+	v1Ctrl := v1Controllers.InitializeV1Controller(
+		v1Usecase, 
+		logger,
+		{{- range .Features}}
+		{{.}}Controller,
+		{{- end}}
+	)
 	// [APP_CONTROLLER_INIT_MARKER]
 
 	controller := controllers.InitializeController(v1Ctrl, logger)

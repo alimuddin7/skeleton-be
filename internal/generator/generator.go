@@ -15,14 +15,15 @@ import (
 var templateFS embed.FS
 
 type Config struct {
-	ProjectName  string   `json:"projectName"`
-	ServiceCode  string   `json:"serviceCode"`
-	Database     string   `json:"database"`
-	ProjectTypes []string `json:"projectTypes"`
-	ProjectType  string   `json:"projectType,omitempty"` // Deprecated: use ProjectTypes
-	Modules      []string `json:"modules"`
-	Hosts        []string `json:"hosts"`
-	Features     []string `json:"features,omitempty"` // CRUD feature names (e.g. ["user", "product"])
+	ProjectName  string            `json:"projectName"`
+	ServiceCode  string            `json:"serviceCode"`
+	Database     string            `json:"database"`
+	ProjectTypes []string          `json:"projectTypes"`
+	ProjectType  string            `json:"projectType,omitempty"` // Deprecated: use ProjectTypes
+	Modules      []string          `json:"modules"`
+	Hosts        []string          `json:"hosts"`
+	Features     []string          `json:"features,omitempty"`   // CRUD feature names (e.g. ["user", "product"])
+	FeatureDBs   map[string]string `json:"featureDBs,omitempty"` // Maps feature to db type (e.g. {"user": "postgresql"})
 }
 
 func Generate(destDir string, cfg Config) error {
@@ -141,12 +142,26 @@ func AddFeature(name string) error {
 		return err
 	}
 
+	// Track feature in config for regeneration
+	lowerName := strings.ToLower(name)
+	for _, f := range cfg.Features {
+		if f == lowerName {
+			return fmt.Errorf("feature %s already exists", lowerName)
+		}
+	}
+	cfg.Features = append(cfg.Features, lowerName)
+
 	featureCfg := createFeatureConfig(cfg, name, false)
 	if err := renderDomainComponents(featureCfg); err != nil {
 		return err
 	}
 
-	return registerFeatureInBaseFiles(featureCfg.FeatureName, featureCfg.FeatureNameLower)
+	// Save updated state
+	if err := saveProjectState(".", *cfg); err != nil {
+		return err
+	}
+
+	return Generate(".", *cfg)
 }
 
 func AddCRUD(name, dbType string) error {
@@ -165,6 +180,15 @@ func AddCRUD(name, dbType string) error {
 		}
 	}
 	cfg.Features = append(cfg.Features, lowerName)
+
+	if cfg.FeatureDBs == nil {
+		cfg.FeatureDBs = make(map[string]string)
+	}
+	cfg.FeatureDBs[lowerName] = dbType
+
+	if !isModulePresent(cfg, dbType) {
+		cfg.Modules = append(cfg.Modules, dbType)
+	}
 
 	// Create directories
 	dirs := []string{
@@ -189,7 +213,7 @@ func AddCRUD(name, dbType string) error {
 		return err
 	}
 
-	return registerCRUDInBaseFiles(featureCfg.FeatureName, featureCfg.FeatureNameLower)
+	return Generate(".", *cfg)
 }
 
 func AddHelper(name string) error {
@@ -463,70 +487,6 @@ func createFeatureConfig(cfg *Config, name string, isCRUD bool) featureConfig {
 }
 
 // Remove renderFeatureComponents as it is superseded by renderDomainComponents
-
-func registerFeatureInBaseFiles(name, lower string) error {
-	cfg, err := loadProjectState("skeleton.json")
-	if err != nil {
-		return err
-	}
-	projectName := cfg.ProjectName
-
-	// 1. Controller Injections
-	ctrlFile := "controllers/v1/controller.go"
-	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_IMPORT_MARKER]", fmt.Sprintf("\t%s \"%s/controllers/v1/%s\"", lower, projectName, lower))
-	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s(c fiber.Ctx) error", name))
-
-	// 2. Usecase Injections
-	ucFile := "usecases/v1/usecase.go"
-	injectBelowMarker(ucFile, "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s(ctx context.Context) (models.Response, error)", name))
-
-	// 3. Router Injections
-	injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]", fmt.Sprintf("\tv1.Get(\"/%s\", ctrl.V1().%s)", lower, name))
-
-	return nil
-}
-
-func registerCRUDInBaseFiles(name, lower string) error {
-	cfg, err := loadProjectState("skeleton.json")
-	if err != nil {
-		return err
-	}
-	projectName := cfg.ProjectName
-
-	// 1. Controller Injections
-	ctrlFile := "controllers/v1/controller.go"
-	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_IMPORT_MARKER]", fmt.Sprintf("\t%s \"%s/controllers/v1/%s\"", lower, projectName, lower))
-	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_INTERFACE_MARKER]", fmt.Sprintf("\t%s() %s.%sController", name, lower, name))
-	injectBelowMarker(ctrlFile, "// [V1_CONTROLLER_IMPL_MARKER]", fmt.Sprintf("\t%sController %s.%sController", name, lower, name))
-
-	// 2. Usecase Injections
-	ucFile := "usecases/v1/usecase.go"
-	injectBelowMarker(ucFile, "// [V1_USECASE_IMPORT_MARKER]", fmt.Sprintf("\t%s \"%s/usecases/v1/%s\"", lower, projectName, lower))
-	injectBelowMarker(ucFile, "// [V1_USECASE_INTERFACE_MARKER]", fmt.Sprintf("\t%s() %s.%sUsecase", name, lower, name))
-	injectBelowMarker(ucFile, "// [V1_USECASE_IMPL_MARKER]", fmt.Sprintf("\t%sUsecase %s.%sUsecase", name, lower, name))
-
-	// 3. Router Injections
-	injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]",
-		fmt.Sprintf("\t%sGroup := v1.Group(\"/%s\")\n\t%sGroup.Post(\"/\", ctrl.V1().%s().Create)\n\t%sGroup.Get(\"/:id\", ctrl.V1().%s().Get)\n\t%sGroup.Get(\"/\", ctrl.V1().%s().List)\n\t%sGroup.Put(\"/:id\", ctrl.V1().%s().Update)\n\t%sGroup.Delete(\"/:id\", ctrl.V1().%s().Delete)",
-			lower, lower, lower, name, lower, name, lower, name, lower, name, lower, name))
-
-	// 4. App wiring injection (internal/app/app.go)
-	appFile := "internal/app/app.go"
-	// Import (only usecase and controller sub-packages, repositories is already imported)
-	injectBelowMarker(appFile, "// [APP_IMPORT_MARKER]",
-		fmt.Sprintf("\t%sUc \"%s/usecases/v1/%s\"\n\t%sCtrl \"%s/controllers/v1/%s\"",
-			lower, projectName, lower, lower, projectName, lower))
-	// Usecase init (uses existing `repo` variable + repositories package for New...Repository)
-	injectBelowMarker(appFile, "// [APP_USECASE_INIT_MARKER]",
-		fmt.Sprintf("\t%sUsecase := %sUc.New%sUsecase(repositories.New%sRepository(repo.GetMysql().GetDB(), logger), logger)",
-			lower, lower, name, name))
-	// Controller init (using _ = to avoid unused variable if not yet wired to router)
-	injectBelowMarker(appFile, "// [APP_CONTROLLER_INIT_MARKER]",
-		fmt.Sprintf("\t_ = %sCtrl.New%sController(%sUsecase)",
-			lower, name, lower))
-
-	return nil
-}
 
 func injectBelowMarker(filePath, marker, code string) error {
 	content, err := os.ReadFile(filePath)

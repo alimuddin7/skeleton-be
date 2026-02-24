@@ -1,89 +1,108 @@
-# Skeleton Backend Generator
+# 🦴 Skeleton-BE Generator
+[![Go Version](https://img.shields.io/github/go-mod/go-version/alimuddin7/skeleton-be)](https://golang.org/)
+[![Release](https://img.shields.io/github/v/tag/alimuddin7/skeleton-be?label=release)](https://github.com/alimuddin7/skeleton-be/tags)
+[![License](https://img.shields.io/github/license/alimuddin7/skeleton-be)](LICENSE)
 
-A dynamic boilerplate generator for Fiber v3 microservices. This tool helps you quickly scaffold production-ready Go microservices using Fiber v3, GORM v2, and Zerolog, following clean architecture patterns.
+**Skeleton-BE** is a modern, interactive CLI boilerplate generator for Go microservices. Built on top of **Fiber v3**, **GORM v2**, and **Zerolog**, it follows Clean Architecture principles to help you scaffold production-ready services in seconds.
 
-## Installation
+---
 
-To install the generator, run:
+## ✨ Key Features
+
+- 🛠 **Interactive CLI**: Smooth wizard experience powered by [Huh](https://github.com/charmbracelet/huh) and [Fang](https://github.com/charmbracelet/fang).
+- 🏗 **Clean Architecture**: Separated layers for Controllers, Usecases, Repositories, and Models.
+- 🔌 **Plug & Play Modules**: Easily add Redis, Kafka, NATS, MinIO, and more.
+- 📡 **gRPC Support**: Built-in templates for gRPC Server and Client.
+- 🏢 **Multi-Host Integration**: Ready-to-go templates for integrating with external API hosts.
+- 🐳 **Docker Ready**: Pre-configured Dockerfile and Docker Compose for Dev, Staging, and Prod.
+- 🚀 **GitLab CI/CD**: Complete CI/CD pipelines including SonarQube scanning.
+
+---
+
+## 🚀 Installation
+
+Install the CLI globally using Go:
 
 ```bash
 go install github.com/alimuddin7/skeleton-be@latest
 ```
 
-Ensure that your `$GOPATH/bin` is in your system's `PATH`.
+> [!TIP]
+> Make sure your `$GOPATH/bin` is in your system's `PATH` to run `skeleton-be` from anywhere.
 
-## Usage
+---
 
-### Initialize a New Project
+## 🛠 Usage
 
-To create a new project, simply run:
+### 1. Initialize a New Project
+Start the 8-step interactive wizard to scaffold your service:
 
 ```bash
 skeleton-be init
 ```
 
-This will launch an interactive wizard to configure your new microservice. You can choose:
-- Project Name
-- Service Code
-- Project Type (Backend, Scheduler, Worker, Publisher, gRPC)
-- Database (MySQL, PostgreSQL)
-- Additional modules (Redis, Kafka, NATS, MinIO, etc.)
+The wizard will guide you through:
+1. **Project Name** - e.g., `payment-service`
+2. **Service Code** - e.g., `OF01`, `OAG02`
+3. **Project Type** - Backend, Scheduler, Worker, etc.
+4. **Primary Database** - MySQL or PostgreSQL
+5. **Additional Modules** - Select Redis, Kafka, etc.
+6. **External API Hosts** - Input host names (comma-separated)
+7. **Asynq** - Redis-based background queues
+8. **gRPC Support** - Server, Client, or Both
 
-Alternatively, you can use flags for non-interactive mode:
-
-```bash
-skeleton-be init --name my-service --code 01 --type Backend --db postgresql
-```
-
-### Add Modules to Existing Project
-
-You can add new modules to an existing project:
+### 2. Add Components to Existing Project
+Keep your project growing with simple commands:
 
 ```bash
-skeleton-be add redis
-skeleton-be add kafka
+# Add a module (e.g., redis)
+skeleton-be add module redis
+
+# Add an external API host integration
+skeleton-be add host payment-core
+
+# Generate full CRUD (Controller, Usecase, Repository, Model, Routes)
+skeleton-be add crud user --db mysql
+
+# Add specific helper or route
+skeleton-be add helper jwt
+skeleton-be add route transaction
 ```
 
-### Add a new CRUD Feature
-Generate a full CRUD feature set (Controller, Usecase, Repository, Model, Routes):
+### 3. Database Migrations
+Generate standardized migration files:
 
 ```bash
-skeleton-be add crud <name> --db <mysql|postgresql>
+skeleton-be migrate create create_users_table
 ```
 
-### Add a new Helper
-Generate a new helper function stub:
+---
 
-```bash
-skeleton-be add helper <name>
+## 📂 Project Structure
+
+Skeleton-BE generates a strict and clean directory structure:
+
+```text
+├── cmd/                # Entry points
+├── configs/            # Configuration logic (Env/YAML)
+├── constants/          # Application-wide constants
+├── controllers/        # Delivery layer (Fiber handlers)
+├── models/             # Business entities & DTOs (Request/Response)
+├── repositories/       # Data layer (SQL, NoSQL, Cache)
+├── usecases/           # Business logic layer
+├── hosts/              # External API integrations
+├── helpers/            # Cross-cutting utilities (Auth, HTTP, Logger)
+├── routers/            # Route definitions
+├── docker/             # Docker configurations
+└── errorcodes/         # Standardized error definitions
 ```
 
-### Database Migrations
-Manage database migrations:
+---
 
-```bash
-# Create a new migration file
-skeleton-be migrate create <name>
-```
+## 🤝 Contribution
 
-### Available Helpers
-The following helpers are included by default:
-- **HTTP Helper**: `net/http` wrapper for making external requests.
-- **JWT Helper**: Token generation and parsing.
-- **Auth Helper**: Password hashing and authentication.
-- **Pagination Helper**: Pagination struct generator.
-- **General Helper**: Env loading, date conversion, unique array, currency format, etc.
-- **Meta Helper**: Standardized API response metadata.
-- **Error Helper**: Error handling utilities.
-- **Gorm Logger**: Custom GORM logger using Zerolog.
-- **Health Check**: Health check response generator.
+Feel free to open issues or submit pull requests. Let's make Go microservice development faster and cleaner!
 
-## Project Structure
+---
 
-### Add External Host Integration
-
-Add an integration with an external service:
-
-```bash
-skeleton-be add host payment-service
-```
+*Authored by [ahmadfikrialimudin](https://github.com/alimuddin7)*

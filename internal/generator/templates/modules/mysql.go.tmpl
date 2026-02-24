@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"{{.ProjectName}}/configs"
 	"{{.ProjectName}}/helpers"
-	"{{.ProjectName}}/dto"
+	"{{.ProjectName}}/models"
 	"github.com/rs/zerolog"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -14,7 +14,7 @@ import (
 )
 
 type MysqlRepository interface {
-	HealthCheck(ctx context.Context) dto.DataHealthCheck
+	HealthCheck(ctx context.Context) models.DataHealthCheck
 	GetDB() *gorm.DB
 }
 
@@ -53,8 +53,8 @@ func ConnectMysql(log zerolog.Logger) *gorm.DB {
 	return db
 }
 
-func (m *mysqlRepository) HealthCheck(ctx context.Context) dto.DataHealthCheck {
-	res := dto.DataHealthCheck{
+func (m *mysqlRepository) HealthCheck(ctx context.Context) models.DataHealthCheck {
+	res := models.DataHealthCheck{
 		ServiceName: "MySQL Database",
 		StatusCode:  200,
 	}

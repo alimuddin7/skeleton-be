@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"{{.ProjectName}}/configs"
 	"{{.ProjectName}}/helpers"
-	"{{.ProjectName}}/dto"
+	"{{.ProjectName}}/models"
 	"github.com/rs/zerolog"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -14,7 +14,7 @@ import (
 )
 
 type PostgreRepository interface {
-	HealthCheck(ctx context.Context) dto.DataHealthCheck
+	HealthCheck(ctx context.Context) models.DataHealthCheck
 	GetDB() *gorm.DB
 }
 
@@ -53,8 +53,8 @@ func ConnectPostgre(log zerolog.Logger) *gorm.DB {
 	return db
 }
 
-func (p *postgreRepository) HealthCheck(ctx context.Context) dto.DataHealthCheck {
-	res := dto.DataHealthCheck{
+func (p *postgreRepository) HealthCheck(ctx context.Context) models.DataHealthCheck {
+	res := models.DataHealthCheck{
 		ServiceName: "PostgreSQL Database",
 		StatusCode:  200,
 	}

@@ -1,9 +1,8 @@
 package controllers
 
 import (
-	"{{.ProjectName}}/dto"
-	"{{.ProjectName}}/helpers"
 	"{{.ProjectName}}/models"
+	"{{.ProjectName}}/helpers"
 	{{if .IsCRUD}}
 	"{{.ProjectName}}/usecases/v1"
 	"strconv"
@@ -90,7 +89,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 // @Tags {{.FeatureNameLower}}
 // @ID {{.FeatureNameLower}}
 // @Produce json
-// @Success 200 {object} dto.Response
+// @Success 200 {object} models.Response
 // @Router /v1/{{.FeatureNameLower}} [GET]
 func (ctrl *v1Controller) {{.FeatureName}}(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.{{.FeatureName}}(c.Context())

@@ -2,121 +2,179 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/alimuddin7/skeleton-be/internal/generator"
-
-	"github.com/manifoldco/promptui"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a new project",
-	Run: func(cmd *cobra.Command, args []string) {
-		projectName, _ := cmd.Flags().GetString("name")
-		serviceCode, _ := cmd.Flags().GetString("code")
-		if serviceCode == "" {
-			serviceCode, _ = cmd.Flags().GetString("service-code")
-		}
-		database, _ := cmd.Flags().GetString("db")
-		if database == "" {
-			database, _ = cmd.Flags().GetString("database")
-		}
-		projectType, _ := cmd.Flags().GetString("type")
-		if projectType == "" {
-			projectType, _ = cmd.Flags().GetString("project-type")
-		}
+	Long:  "Interactively generate a new production-ready Go microservice boilerplate.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fName, _ := cmd.Flags().GetString("name")
+		fCode, _ := cmd.Flags().GetString("code")
+		fType, _ := cmd.Flags().GetString("type")
+		fDb, _ := cmd.Flags().GetString("db")
 
+		projectName := fName
 		if projectName == "" {
-			projectNamePrompt := promptui.Prompt{
-				Label:   "Project Name",
-				Default: "my-service",
-			}
-			projectName, _ = projectNamePrompt.Run()
+			projectName = "my-service"
 		}
-
+		serviceCode := fCode
 		if serviceCode == "" {
-			serviceCodePrompt := promptui.Prompt{
-				Label:   "Service Code (2 digits)",
-				Default: "01",
-			}
-			serviceCode, _ = serviceCodePrompt.Run()
+			serviceCode = "01"
+		}
+		projectType := fType
+		if projectType == "" {
+			projectType = "Backend"
+		}
+		primaryDb := fDb
+		if primaryDb == "" {
+			primaryDb = "mysql"
 		}
 
-		if projectType == "" {
-			typeSelect := promptui.Select{
-				Label: "Select Project Type",
-				Items: []string{"Backend", "Scheduler", "Worker", "Publisher", "gRPC"},
+		var modules []string
+		asynq := "No"
+		grpc := "No"
+		hostInput := "" // comma-separated host names
+
+		var groups []*huh.Group
+
+		// Step 1: Project Name
+		if fName == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("Project Name").
+					Description("Name of your Go microservice (e.g. payment-service)").
+					Value(&projectName),
+			))
+		}
+
+		// Step 2: Service Code
+		if fCode == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("Service Code").
+					Description("Project code and 2-digit identifier (e.g. OF01, OAG02)").
+					Value(&serviceCode),
+			))
+		}
+
+		// Step 3: Project Type
+		if fType == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Project Type").
+					Options(huh.NewOptions("Backend", "Scheduler", "Worker", "Publisher", "gRPC")...).
+					Value(&projectType),
+			))
+		}
+
+		// Step 4: Primary Database
+		if fDb == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Primary Database").
+					Options(huh.NewOptions("mysql", "postgresql")...).
+					Value(&primaryDb),
+			))
+		}
+
+		// Step 5: Additional Modules (optional — can skip by pressing Enter with nothing selected)
+		groups = append(groups, huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("Additional Modules").
+				Description("Space to toggle, Enter to confirm. No selection = skip").
+				Options(
+					huh.NewOption("Redis Standalone", "redis"),
+					huh.NewOption("Redis Cluster", "redis-cluster"),
+					huh.NewOption("Kafka", "kafka"),
+					huh.NewOption("NATS", "nats"),
+					huh.NewOption("MinIO", "minio"),
+				).
+				Value(&modules),
+		))
+
+		// Step 6: External Hosts / API integration
+		groups = append(groups, huh.NewGroup(
+			huh.NewInput().
+				Title("External API Hosts").
+				Description("Nama host eksternal, pisah koma jika lebih dari satu (e.g. core-payment,user-service). Kosongkan untuk skip").
+				Value(&hostInput),
+		))
+
+		// Step 7: Asynq
+		groups = append(groups, huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Asynq (Background Queue)").
+				Description("Redis-based async job queue").
+				Options(huh.NewOptions("No", "Publisher", "Consumer", "Both")...).
+				Value(&asynq),
+		))
+
+		// Step 8: gRPC
+		groups = append(groups, huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("gRPC Support").
+				Options(huh.NewOptions("No", "Server", "Client", "Both")...).
+				Value(&grpc),
+		))
+
+		if err := huh.NewForm(groups...).Run(); err != nil {
+			if err.Error() == "user aborted" {
+				fmt.Println("Cancelled.")
+				return nil
 			}
-			_, projectType, _ = typeSelect.Run()
+			return fmt.Errorf("init cancelled: %w", err)
+		}
+
+		// Parse hosts
+		var cleanHosts []string
+		for _, h := range strings.Split(hostInput, ",") {
+			h = strings.TrimSpace(h)
+			if h != "" {
+				cleanHosts = append(cleanHosts, strings.ToLower(h))
+			}
 		}
 
 		config := generator.Config{
-			ProjectName:  projectName,
-			ServiceCode:  serviceCode,
+			ProjectName:  strings.TrimSpace(projectName),
+			ServiceCode:  strings.TrimSpace(serviceCode),
 			ProjectTypes: []string{projectType},
-			Modules:      []string{},
-			Hosts:        []string{},
+			Database:     primaryDb,
+			Modules:      modules,
+			Hosts:        cleanHosts,
 		}
 
-		// Add scheduler module if project type list contains Scheduler
+		if config.ProjectName == "" {
+			return fmt.Errorf("project name cannot be empty")
+		}
+
+		// Add DB to modules
+		if config.Database != "" {
+			config.Modules = append(config.Modules, config.Database)
+		}
+		// Scheduler module
 		for _, pt := range config.ProjectTypes {
 			if pt == "Scheduler" {
 				config.Modules = append(config.Modules, "scheduler")
 			}
 		}
-
-		// Interactive module selection
-		fmt.Println("\n=== Module Selection ===")
-
-		modules := []struct {
-			name  string
-			label string
-		}{
-			{"mysql", "Should MySQL repository functionality be included?"},
-			{"postgresql", "Should PostgreSQL repository functionality be included?"},
-			{"redis", "Should Redis standalone functionality be included?"},
-			{"redis-cluster", "Should Redis cluster functionality be included?"},
-			{"kafka", "Should Kafka functionality be included?"},
-			{"nats", "Should NATS functionality be included?"},
-			{"minio", "Should MinIO functionality be included?"},
-		}
-
-		for _, mod := range modules {
-			prompt := promptui.Select{
-				Label: mod.label,
-				Items: []string{"Yes", "No"},
-			}
-			_, result, _ := prompt.Run()
-			if result == "Yes" {
-				config.Modules = append(config.Modules, mod.name)
-			}
-		}
-
-		// Ask about Redis Asynq (for queue/worker functionality)
-		asynqPrompt := promptui.Select{
-			Label: "Should Redis Asynq (queue/worker) functionality be included?",
-			Items: []string{"No", "Publisher", "Consumer", "Both"},
-		}
-		_, asynqResult, _ := asynqPrompt.Run()
-		if asynqResult != "No" {
+		// Asynq modules
+		if asynq != "No" {
 			config.Modules = append(config.Modules, "redis-asynq")
-			// Store asynq mode in config for template usage
-			if asynqResult == "Publisher" || asynqResult == "Both" {
+			if asynq == "Publisher" || asynq == "Both" {
 				config.Modules = append(config.Modules, "asynq-publisher")
 			}
-			if asynqResult == "Consumer" || asynqResult == "Both" {
+			if asynq == "Consumer" || asynq == "Both" {
 				config.Modules = append(config.Modules, "asynq-consumer")
 			}
 		}
-
-		// Ask about gRPC
-		grpcPrompt := promptui.Select{
-			Label: "Should gRPC functionality be included?",
-			Items: []string{"None", "Server", "Client", "Both"},
-		}
-		_, grpcResult, _ := grpcPrompt.Run()
-		switch grpcResult {
+		// gRPC modules
+		switch grpc {
 		case "Server":
 			config.Modules = append(config.Modules, "grpc-server")
 		case "Client":
@@ -125,13 +183,13 @@ var initCmd = &cobra.Command{
 			config.Modules = append(config.Modules, "grpc-server", "grpc-client")
 		}
 
-		fmt.Printf("\nGenerating project %s...\n", projectName)
+		fmt.Printf("\nGenerating project \"%s\" [%s]...\n", config.ProjectName, config.ServiceCode)
 		if err := generator.Generate(config.ProjectName, config); err != nil {
-			fmt.Printf("Generation failed: %v\n", err)
-			return
+			return fmt.Errorf("generation failed: %w", err)
 		}
 
-		fmt.Println("Project generated successfully!")
+		fmt.Println("✓ Project generated successfully!")
+		return nil
 	},
 }
 
@@ -139,9 +197,6 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringP("name", "n", "", "Project name")
 	initCmd.Flags().StringP("code", "c", "", "Service code (2 digits)")
-	initCmd.Flags().String("service-code", "", "Service code (alias for --code)")
 	initCmd.Flags().StringP("db", "d", "", "Primary database (mysql, postgresql)")
 	initCmd.Flags().StringP("type", "t", "", "Project type (Backend, Scheduler, Worker, Publisher, gRPC)")
-	initCmd.Flags().String("database", "", "Primary database (alias for --db)")
-	initCmd.Flags().String("project-type", "", "Project type (alias for --type)")
 }

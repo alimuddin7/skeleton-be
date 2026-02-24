@@ -49,6 +49,26 @@ func Generate(destDir string, cfg Config) error {
 		}
 	}
 
+	// Render host-specific templates separately with custom context
+	for _, host := range cfg.Hosts {
+		lowerName := strings.ToLower(host)
+		hostDir := filepath.Join(destDir, "hosts", lowerName)
+		hostCfg := struct {
+			ProjectName   string
+			HostName      string
+			HostNameLower string
+			HostNameTitle string
+		}{
+			ProjectName:   cfg.ProjectName,
+			HostName:      host,
+			HostNameLower: lowerName,
+			HostNameTitle: strings.Title(host),
+		}
+		if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -369,8 +389,8 @@ func getBaseTemplates() map[string]string {
 		"templates/base/gitlab/script/command.sh.tmpl":              ".gitlab/script/command.sh",
 		"templates/base/errorcodes/errorcodes.json.tmpl":            "errorcodes.json",
 		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
-		"templates/base/dto/response.go.tmpl":                       "dto/response.go",
-		"templates/base/dto/healthcheck.go.tmpl":                    "dto/healthcheck.go",
+		"templates/base/dto/response.go.tmpl":                       "models/response.go",
+		"templates/base/dto/healthcheck.go.tmpl":                    "models/healthcheck.go",
 	}
 }
 
@@ -427,10 +447,6 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 		}
 	}
 
-	// Add host-specific templates
-	for _, host := range cfg.Hosts {
-		templates["templates/modules/host.go.tmpl"] = fmt.Sprintf("hosts/%s/%s.go", host, host)
-	}
 }
 
 type featureConfig struct {

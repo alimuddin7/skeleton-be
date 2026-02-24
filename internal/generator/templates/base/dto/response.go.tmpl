@@ -1,4 +1,4 @@
-package dto
+package models
 
 type MetaData struct {
 	Code    string `json:"code"`
@@ -13,8 +13,8 @@ type Page struct {
 }
 
 type Response struct {
-	Data interface{}  `json:"data,omitempty"`
-	Meta MetaData     `json:"meta"`
-    Count int64       `json:"count,omitempty"`
+	Data  interface{} `json:"data,omitempty"`
+	Meta  MetaData    `json:"meta"`
+	Count int64       `json:"count,omitempty"`
 	Page  *Page       `json:"page,omitempty"`
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"{{.ProjectName}}/dto"
+	"{{.ProjectName}}/models"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -163,9 +163,9 @@ func RoundFloat(input float64, precision int) float64 {
 // --- Pagination Section ---
 
 // Pagination calculates pagination details
-func Pagination(page, limit int, totalData int64) *dto.Page {
+func Pagination(page, limit int, totalData int64) *models.Page {
 	var prevPage, nextPage int
-	var pagination dto.Page
+	var pagination models.Page
 
 	pagination.CurrentPage = page
 

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
 
 	"github.com/alimuddin7/skeleton-be/cmd"
+	"github.com/charmbracelet/fang"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if err := fang.Execute(context.Background(), cmd.Root()); err != nil {
 		os.Exit(1)
 	}
 }

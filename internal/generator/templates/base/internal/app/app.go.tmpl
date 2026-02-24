@@ -1,0 +1,184 @@
+package app
+
+import (
+	"{{.ProjectName}}/configs"
+	"{{.ProjectName}}/controllers"
+	v1Controllers "{{.ProjectName}}/controllers/v1"
+	"{{.ProjectName}}/helpers"
+	"{{.ProjectName}}/routers"
+	v1Usecases "{{.ProjectName}}/usecases/v1"
+
+	{{- if has .ProjectTypes "Scheduler"}}
+	"{{.ProjectName}}/scheduler"
+	{{- end}}
+	{{- if .Modules}}
+	"{{.ProjectName}}/repositories"
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	mysql "{{$.ProjectName}}/repositories/mysql"
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	postgre "{{$.ProjectName}}/repositories/postgre"
+	{{- end}}
+	{{- if eq . "redis"}}
+	redis "{{$.ProjectName}}/repositories/redis"
+	{{- end}}
+	{{- if eq . "kafka"}}
+	kafka "{{$.ProjectName}}/repositories/kafka"
+	{{- end}}
+	{{- if eq . "nats"}}
+	nats "{{$.ProjectName}}/repositories/nats"
+	{{- end}}
+	{{- if eq . "minio"}}
+	minio "{{$.ProjectName}}/repositories/minio"
+	{{- end}}
+	{{- if eq . "grpc-server"}}
+	grpcserver "{{$.ProjectName}}/grpc/server"
+	{{- end}}
+	{{- if eq . "redis-cluster"}}
+	rediscluster "{{$.ProjectName}}/repositories/redis_cluster"
+	{{- end}}
+	{{- end}}
+	{{- end}}
+
+	{{- if .Hosts}}
+	"{{.ProjectName}}/hosts"
+	{{- range .Hosts}}
+	{{.}} "{{$.ProjectName}}/hosts/{{.}}"
+	{{- end}}
+	{{- end}}
+
+	{{- range .Features}}
+	{{.}}Uc "{{$.ProjectName}}/usecases/v1/{{.}}"
+	{{.}}Ctrl "{{$.ProjectName}}/controllers/v1/{{.}}"
+	{{- end}}
+	// [APP_IMPORT_MARKER]
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/rs/zerolog"
+)
+
+// App holds all application-level dependencies.
+type App struct {
+	Router     fiber.Router
+	Logs       zerolog.Logger
+	Controller controllers.Controller
+	{{- if .Modules}}
+	Repo       repositories.Repository
+	{{- end}}
+	{{- if .Hosts}}
+	Host       hosts.Host
+	{{- end}}
+	V1Usecase  v1Usecases.Usecase
+	V1Ctrl     v1Controllers.V1Controller
+	{{- if has .ProjectTypes "Scheduler"}}
+	Scheduler  *scheduler.Scheduler
+	{{- end}}
+	{{- if has .ProjectTypes "gRPC"}}
+	{{- range .Modules}}
+	{{- if eq . "grpc-server"}}
+	GrpcServer *grpcserver.GrpcServer
+	{{- end}}
+	{{- end}}
+	{{- end}}
+}
+
+// InitializeApp wires all dependencies and returns a ready-to-use App.
+func InitializeApp() *App {
+	configs.LoadConfig()
+	logger := helpers.InitializeZeroLogs()
+
+	{{- if .Modules}}
+	// --- Repositories ---
+	{{- if has .Modules "nats"}}
+	nc, js := nats.ConnectNats(logger)
+	{{- end}}
+	repo := repositories.InitializeRepository(
+		{{- range .Modules}}
+		{{- if eq . "mysql"}}
+		mysql.InitializeMysqlRepository(mysql.ConnectMysql(logger), logger),
+		{{- end}}
+		{{- if eq . "postgresql"}}
+		postgre.InitializePostgreRepository(postgre.ConnectPostgre(logger), logger),
+		{{- end}}
+		{{- if eq . "redis"}}
+		redis.InitializeRedisRepository(redis.ConnectRedis(logger), logger),
+		{{- end}}
+		{{- if eq . "kafka"}}
+		kafka.InitializeKafkaRepository(kafka.ConnectKafkaReader(logger), kafka.ConnectKafkaWriter(logger), logger),
+		{{- end}}
+		{{- if eq . "nats"}}
+		nats.InitializeNatsRepository(nc, js, logger),
+		{{- end}}
+		{{- if eq . "minio"}}
+		minio.InitializeMinioRepository(minio.ConnectMinio(logger), logger),
+		{{- end}}
+		{{- if eq . "redis-cluster"}}
+		rediscluster.InitializeRedisClusterRepository(rediscluster.ConnectRedisCluster(logger), logger),
+		{{- end}}
+		{{- end}}
+		logger,
+	)
+	{{- end}}
+
+	{{- if .Hosts}}
+	// --- Hosts ---
+	{{- range .Hosts}}
+	{{.}}Host := {{.}}.Initialize{{. | title}}(logger)
+	{{- end}}
+	host := hosts.InitializeHost(
+		{{- range .Hosts}}
+		{{.}}Host,
+		{{- end}}
+		logger,
+	)
+	{{- end}}
+	// [APP_HOST_INIT_MARKER]
+
+	// --- Usecases ---
+	v1Usecase := v1Usecases.InitializeV1Usecase(
+		{{- if .Modules}}repo,{{end}}
+		{{- if .Hosts}}host,{{end}}
+		logger,
+	)
+	{{- range .Features}}
+	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase(repositories.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger), logger)
+	{{- end}}
+	// [APP_USECASE_INIT_MARKER]
+
+	// --- Controllers ---
+	v1Ctrl := v1Controllers.InitializeV1Controller(v1Usecase, logger)
+	{{- range .Features}}
+	_ = {{.}}Ctrl.New{{. | title}}Controller({{.}}Usecase)
+	{{- end}}
+	// [APP_CONTROLLER_INIT_MARKER]
+
+	controller := controllers.InitializeController(v1Ctrl, logger)
+
+	a := &App{
+		Logs:       logger,
+		Controller: controller,
+		{{- if .Modules}}
+		Repo:       repo,
+		{{- end}}
+		{{- if .Hosts}}
+		Host:       host,
+		{{- end}}
+		V1Usecase:  v1Usecase,
+		V1Ctrl:     v1Ctrl,
+	}
+
+	{{- if has .ProjectTypes "Scheduler"}}
+	a.Scheduler = scheduler.InitializeScheduler(v1Usecase, logger)
+	{{- end}}
+
+	{{- if has .ProjectTypes "gRPC"}}
+	{{- range .Modules}}
+	{{- if eq . "grpc-server"}}
+	a.GrpcServer = grpcserver.InitializeGrpcServer(v1Usecase, logger)
+	{{- end}}
+	{{- end}}
+	{{- end}}
+
+	return a
+}

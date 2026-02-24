@@ -36,10 +36,10 @@ var initCmd = &cobra.Command{
 			primaryDb = "mysql"
 		}
 
-		var modules []string
+		modules, _ := cmd.Flags().GetStringSlice("modules")
 		asynq := "No"
 		grpc := "No"
-		hostInput := "" // comma-separated host names
+		hostInput, _ := cmd.Flags().GetString("hosts")
 
 		var groups []*huh.Group
 
@@ -84,7 +84,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Step 5: Additional Modules
-		if len(modules) == 0 {
+		if !cmd.Flags().Changed("modules") {
 			groups = append(groups, huh.NewGroup(
 				huh.NewMultiSelect[string]().
 					Title("Additional Modules").
@@ -101,7 +101,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Step 6: External Hosts / API integration
-		if hostInput == "" {
+		if !cmd.Flags().Changed("hosts") {
 			groups = append(groups, huh.NewGroup(
 				huh.NewInput().
 					Title("External API Hosts").

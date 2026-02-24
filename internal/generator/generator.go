@@ -22,6 +22,7 @@ type Config struct {
 	ProjectType  string   `json:"projectType,omitempty"` // Deprecated: use ProjectTypes
 	Modules      []string `json:"modules"`
 	Hosts        []string `json:"hosts"`
+	Features     []string `json:"features,omitempty"` // CRUD feature names (e.g. ["user", "product"])
 }
 
 func Generate(destDir string, cfg Config) error {
@@ -156,6 +157,15 @@ func AddCRUD(name, dbType string) error {
 
 	featureCfg := createFeatureConfig(cfg, name, true)
 
+	// Track feature in config for regeneration
+	lowerName := strings.ToLower(name)
+	for _, f := range cfg.Features {
+		if f == lowerName {
+			return fmt.Errorf("feature %s already exists", lowerName)
+		}
+	}
+	cfg.Features = append(cfg.Features, lowerName)
+
 	// Create directories
 	dirs := []string{
 		"repositories",
@@ -171,6 +181,11 @@ func AddCRUD(name, dbType string) error {
 	}
 
 	if err := renderDomainComponents(featureCfg); err != nil {
+		return err
+	}
+
+	// Save updated state
+	if err := saveProjectState(".", *cfg); err != nil {
 		return err
 	}
 
@@ -232,7 +247,9 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	// Base directories (always created)
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
-		"routers", "models", "errorcodes", "docker", "migrations", "helpers", ".gitlab", ".gitlab/ci", ".gitlab/script",
+		"routers", "models", "errorcodes", "docker", "migrations", "helpers", "helpers/models",
+		"internal/app",
+		".gitlab", ".gitlab/ci", ".gitlab/script",
 	}
 
 	for _, dir := range baseDirs {
@@ -370,6 +387,7 @@ func getBaseTemplates() map[string]string {
 		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
 		"templates/base/dto/response.go.tmpl":                       "models/response.go",
 		"templates/base/dto/healthcheck.go.tmpl":                    "models/healthcheck.go",
+		"templates/base/internal/app/app.go.tmpl":                   "internal/app/app.go",
 	}
 }
 
@@ -491,6 +509,21 @@ func registerCRUDInBaseFiles(name, lower string) error {
 	injectBelowMarker("routers/main.go", "// [V1_ROUTES_MARKER]",
 		fmt.Sprintf("\t%sGroup := v1.Group(\"/%s\")\n\t%sGroup.Post(\"/\", ctrl.V1().%s().Create)\n\t%sGroup.Get(\"/:id\", ctrl.V1().%s().Get)\n\t%sGroup.Get(\"/\", ctrl.V1().%s().List)\n\t%sGroup.Put(\"/:id\", ctrl.V1().%s().Update)\n\t%sGroup.Delete(\"/:id\", ctrl.V1().%s().Delete)",
 			lower, lower, lower, name, lower, name, lower, name, lower, name, lower, name))
+
+	// 4. App wiring injection (internal/app/app.go)
+	appFile := "internal/app/app.go"
+	// Import (only usecase and controller sub-packages, repositories is already imported)
+	injectBelowMarker(appFile, "// [APP_IMPORT_MARKER]",
+		fmt.Sprintf("\t%sUc \"%s/usecases/v1/%s\"\n\t%sCtrl \"%s/controllers/v1/%s\"",
+			lower, projectName, lower, lower, projectName, lower))
+	// Usecase init (uses existing `repo` variable + repositories package for New...Repository)
+	injectBelowMarker(appFile, "// [APP_USECASE_INIT_MARKER]",
+		fmt.Sprintf("\t%sUsecase := %sUc.New%sUsecase(repositories.New%sRepository(repo.GetMysql().GetDB(), logger), logger)",
+			lower, lower, name, name))
+	// Controller init (using _ = to avoid unused variable if not yet wired to router)
+	injectBelowMarker(appFile, "// [APP_CONTROLLER_INIT_MARKER]",
+		fmt.Sprintf("\t_ = %sCtrl.New%sController(%sUsecase)",
+			lower, name, lower))
 
 	return nil
 }

@@ -8,148 +8,36 @@ import (
 	"syscall"
 
 	"{{.ProjectName}}/configs"
-	"{{.ProjectName}}/controllers"
-	v1Controllers "{{.ProjectName}}/controllers/v1"
-	"{{.ProjectName}}/helpers"
+	"{{.ProjectName}}/internal/app"
 	"{{.ProjectName}}/routers"
-
-	v1Usecases "{{.ProjectName}}/usecases/v1"
-
-	{{- if has .ProjectTypes "Scheduler"}}
-	"{{.ProjectName}}/scheduler"
-	{{- end}}
-	{{- if .Modules}}
-	"{{.ProjectName}}/repositories"
-	{{- range .Modules}}
-	{{- if eq . "mysql"}}
-	mysql "{{$.ProjectName}}/repositories/mysql"
-	{{- end}}
-	{{- if eq . "postgresql"}}
-	postgre "{{$.ProjectName}}/repositories/postgre"
-	{{- end}}
-	{{- if eq . "redis"}}
-	redis "{{$.ProjectName}}/repositories/redis"
-	{{- end}}
-	{{- if eq . "kafka"}}
-	kafka "{{$.ProjectName}}/repositories/kafka"
-	{{- end}}
-	{{- if eq . "nats"}}
-	nats "{{$.ProjectName}}/repositories/nats"
-	{{- end}}
-	{{- if eq . "minio"}}
-	minio "{{$.ProjectName}}/repositories/minio"
-	{{- end}}
-	{{- if eq . "grpc-server"}}
-	grpcserver "{{$.ProjectName}}/grpc/server"
-	{{- end}}
-	{{- if eq . "redis-cluster"}}
-	rediscluster "{{$.ProjectName}}/repositories/redis_cluster"
-	{{- end}}
-	{{- end}}
-	{{- end}}
-	
-	{{- if .Hosts}}
-	"{{.ProjectName}}/hosts"
-	{{- range .Hosts}}
-	{{.}} "{{$.ProjectName}}/hosts/{{.}}"
-	{{- end}}
-	{{- end}}
 )
 
 func main() {
-	configs.LoadConfig()
-	logger := helpers.InitializeZeroLogs()
-
-	// Initialize Repository (Composite)
-	{{- if .Modules}}
-	{{- if has .Modules "nats"}}
-	nc, js := nats.ConnectNats(logger)
-	{{- end}}
-	repo := repositories.InitializeRepository(
-		{{- range .Modules}}
-		{{- if eq . "mysql"}}
-		mysql.InitializeMysqlRepository(mysql.ConnectMysql(logger), logger),
-		{{- end}}
-		{{- if eq . "postgresql"}}
-		postgre.InitializePostgreRepository(postgre.ConnectPostgre(logger), logger),
-		{{- end}}
-		{{- if eq . "redis"}}
-		redis.InitializeRedisRepository(redis.ConnectRedis(logger), logger),
-		{{- end}}
-		{{- if eq . "kafka"}}
-		kafka.InitializeKafkaRepository(kafka.ConnectKafkaReader(logger), kafka.ConnectKafkaWriter(logger), logger),
-		{{- end}}
-		{{- if eq . "nats"}}
-		nats.InitializeNatsRepository(nc, js, logger),
-		{{- end}}
-		{{- if eq . "minio"}}
-		minio.InitializeMinioRepository(minio.ConnectMinio(logger), logger),
-		{{- end}}
-		{{- if eq . "redis-cluster"}}
-		rediscluster.InitializeRedisClusterRepository(rediscluster.ConnectRedisCluster(logger), logger),
-		{{- end}}
-		{{- end}}
-		logger,
-	)
-	{{- end}}
-
-	{{- if .Hosts}}
-	// Initialize hosts
-	{{- range .Hosts}}
-	{{.}}Host := {{.}}.Initialize{{. | title}}(logger)
-	{{- end}}
-	host := hosts.InitializeHost(
-		{{- range .Hosts}}
-		{{.}}Host,
-		{{- end}}
-		logger,
-	)
-	{{- end}}
-
-	v1Usecase := v1Usecases.InitializeV1Usecase(
-		{{- if .Modules}}repo,{{end}}
-		{{- if .Hosts}}host,{{end}}
-		logger,
-	)
-	v1Controller := v1Controllers.InitializeV1Controller(v1Usecase, logger)
-
-	controller := controllers.InitializeController(v1Controller, logger)
+	a := app.InitializeApp()
+	logger := a.Logs
 
 	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
-	app := routers.InitializeRouter(controller, logger)
+	fiberApp := routers.InitializeRouter(a.Controller, logger)
 	{{- end}}
 
 	{{- if has .ProjectTypes "Scheduler"}}
-	// Initialize and Start Scheduler
-	scheduler.InitializeScheduler(v1Usecase, logger).StartScheduler()
+	a.Scheduler.StartScheduler()
 	{{- end}}
 
 	{{- if has .ProjectTypes "gRPC"}}
-	// Initialize and Start gRPC Server
 	{{- range .Modules}}
 	{{- if eq . "grpc-server"}}
-	gs := grpcserver.InitializeGrpcServer(v1Usecase, logger)
-	go gs.Start()
+	go a.GrpcServer.Start()
 	{{- end}}
 	{{- end}}
-	{{- end}}
-
-	{{- if has .ProjectTypes "Publisher"}}
-	// Publisher-specific initialization if needed
-	{{- end}}
-
-	{{- if has .ProjectTypes "Worker"}}
-	// Start Worker/Consumer loop
-	// Example: go v1Usecase.StartConsumer()
 	{{- end}}
 
 	ctx := context.Background()
 	logger.Info().Ctx(ctx).Msg("Finish Initializing")
 
 	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
-	// Start Server (Backend and Publisher usually expose an API)
 	go func() {
-		if err := app.Listen(fmt.Sprintf("%s:%s", configs.Cfg.Server.Address, configs.Cfg.Server.Port)); err != nil {
+		if err := fiberApp.Listen(fmt.Sprintf("%s:%s", configs.Cfg.Server.Address, configs.Cfg.Server.Port)); err != nil {
 			logger.Error().Ctx(ctx).Err(err).Msg("error while running api")
 		}
 	}()
@@ -163,7 +51,7 @@ func main() {
 	logger.Info().Ctx(ctx).Msg("Shutting down server...")
 
 	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
-	if err := app.Shutdown(); err != nil {
+	if err := fiberApp.Shutdown(); err != nil {
 		logger.Error().Ctx(ctx).Err(err).Msg("Server forced to shutdown")
 	}
 	{{- end}}
@@ -171,7 +59,7 @@ func main() {
 	{{- if has .ProjectTypes "gRPC"}}
 	{{- range .Modules}}
 	{{- if eq . "grpc-server"}}
-	gs.Stop()
+	a.GrpcServer.Stop()
 	{{- end}}
 	{{- end}}
 	{{- end}}

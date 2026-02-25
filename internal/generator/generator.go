@@ -194,6 +194,7 @@ func AddCRUD(name, dbType string) error {
 	dirs := []string{
 		"repositories",
 		"models",
+		"models/dto",
 		fmt.Sprintf("controllers/v1/%s", featureCfg.FeatureNameLower),
 		fmt.Sprintf("usecases/v1/%s", featureCfg.FeatureNameLower),
 	}
@@ -248,6 +249,7 @@ func renderDomainComponents(cfg featureConfig) error {
 		"templates/domain/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s/usecase.go", cfg.FeatureNameLower),
 		"templates/domain/repository.go.tmpl": fmt.Sprintf("repositories/%s.go", cfg.FeatureNameLower),
 		"templates/domain/model.go.tmpl":      fmt.Sprintf("models/%s.go", cfg.FeatureNameLower),
+		"templates/domain/dto.go.tmpl":        fmt.Sprintf("models/dto/%s.go", cfg.FeatureNameLower),
 	}
 
 	for tmplPath, destPath := range templates {
@@ -271,7 +273,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	// Base directories (always created)
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
-		"routers", "models", "errorcodes", "docker", "migrations", "helpers", "helpers/models",
+		"routers", "models", "models/dto", "errorcodes", "docker", "migrations", "helpers", "helpers/models",
 		"internal/app",
 		".gitlab", ".gitlab/ci", ".gitlab/script",
 	}
@@ -409,8 +411,8 @@ func getBaseTemplates() map[string]string {
 		"templates/base/gitlab/script/command.sh.tmpl":              ".gitlab/script/command.sh",
 		"templates/base/errorcodes/errorcodes.json.tmpl":            "errorcodes.json",
 		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
-		"templates/base/dto/response.go.tmpl":                       "models/response.go",
-		"templates/base/dto/healthcheck.go.tmpl":                    "models/healthcheck.go",
+		"templates/base/models/dto/response.go.tmpl":                "models/dto/response.go",
+		"templates/base/models/dto/healthcheck.go.tmpl":             "models/healthcheck.go",
 		"templates/base/internal/app/app.go.tmpl":                   "internal/app/app.go",
 	}
 }

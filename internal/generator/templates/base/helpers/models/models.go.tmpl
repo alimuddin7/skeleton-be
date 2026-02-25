@@ -1,8 +1,8 @@
 package models
 
-import "{{.ProjectName}}/models"
+import "{{.ProjectName}}/models/dto"
 
 type ErrorCodeElement struct {
 	Key     string       `json:"key"`
-	Content models.MetaData `json:"content"`
+	Content dto.MetaData `json:"content"`
 }

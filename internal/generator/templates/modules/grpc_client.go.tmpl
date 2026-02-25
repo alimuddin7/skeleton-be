@@ -1,9 +1,6 @@
 package grpcclient
 
 import (
-	"context"
-	"{{.ProjectName}}/configs"
-
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,7 +18,7 @@ type grpcClient struct {
 
 func InitializeGrpcClient(l zerolog.Logger) (GrpcClient, error) {
 	addr := "localhost:50051" // Get from config
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Error().Err(err).Msgf("Failed to connect to gRPC server at %s", addr)
 		return nil, err

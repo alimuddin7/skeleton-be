@@ -1,7 +1,7 @@
 package {{.FeatureNameLower}}
 
 import (
-	"{{.ProjectName}}/models"
+	"{{.ProjectName}}/models/dto"
 	"{{.ProjectName}}/helpers"
 	{{if .IsCRUD}}
 	usecase "{{.ProjectName}}/usecases/v1/{{.FeatureNameLower}}"
@@ -33,7 +33,7 @@ func New{{.FeatureName}}Controller(u usecase.{{.FeatureName}}Usecase) {{.Feature
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
-	var req models.{{.FeatureName}}
+	var req dto.{{.FeatureName}}
 	if err := c.Bind().Body(&req); err != nil {
 		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
@@ -72,7 +72,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
-	var req models.{{.FeatureName}}
+	var req dto.{{.FeatureName}}
 	if err := c.Bind().Body(&req); err != nil {
 		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
@@ -97,7 +97,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 // @Tags {{.FeatureNameLower}}
 // @ID {{.FeatureNameLower}}
 // @Produce json
-// @Success 200 {object} models.Response
+// @Success 200 {object} dto.Response
 // @Router /v1/{{.FeatureNameLower}} [GET]
 func (ctrl *v1Controller) {{.FeatureName}}(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.{{.FeatureName}}(c.Context())

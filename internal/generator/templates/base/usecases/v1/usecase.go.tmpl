@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/rs/zerolog"
 	"{{.ProjectName}}/models"
+	"{{.ProjectName}}/models/dto"
 	"{{.ProjectName}}/helpers"
 	{{- if .Modules}}
 	"{{.ProjectName}}/repositories"
@@ -18,7 +19,7 @@ import (
 )
 
 type Usecase interface {
-	HealthCheck(ctx context.Context) (models.Response, error)
+	HealthCheck(ctx context.Context) (dto.Response, error)
 	{{- range .Features}}
 	{{. | title}}() {{.}}Uc.{{. | title}}Usecase
 	{{- end}}
@@ -65,7 +66,7 @@ func InitializeV1Usecase(
 	}
 }
 
-func (u *usecase) HealthCheck(ctx context.Context) (models.Response, error) {
+func (u *usecase) HealthCheck(ctx context.Context) (dto.Response, error) {
 	var healthChecks []models.DataHealthCheck
 	
 	{{- if .Modules}}

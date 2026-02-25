@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"{{.ProjectName}}/models"
+	"{{.ProjectName}}/models/dto"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -178,9 +178,9 @@ func TelnetIP(urlSvr string) string {
 // --- Pagination Section ---
 
 // Pagination calculates pagination details
-func Pagination(page, limit int, totalData int64) *models.Page {
+func Pagination(page, limit int, totalData int64) *dto.Page {
 	var prevPage, nextPage int
-	var pagination models.Page
+	var pagination dto.Page
 
 	pagination.CurrentPage = page
 

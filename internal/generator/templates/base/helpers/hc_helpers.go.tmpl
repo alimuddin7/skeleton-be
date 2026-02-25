@@ -2,10 +2,11 @@ package helpers
 
 import (
 	"{{.ProjectName}}/models"
+	"{{.ProjectName}}/models/dto"
 )
 
-func GenerateResponseHealthCheck(data ...models.DataHealthCheck) models.Response {
-	return models.Response{
+func GenerateResponseHealthCheck(data ...models.DataHealthCheck) dto.Response {
+	return dto.Response{
 		Data: data,
 	}
 }

@@ -207,7 +207,7 @@ var initCmd = &cobra.Command{
 			return fmt.Errorf("generation failed: %w", err)
 		}
 
-		fmt.Println("✓ Project generated successfully!")
+		fmt.Printf("\n✓ Project \"%s\" generated and synchronized successfully!\n", config.ProjectName)
 		return nil
 	},
 }

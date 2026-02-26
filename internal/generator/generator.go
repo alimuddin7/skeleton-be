@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -71,7 +72,27 @@ func Generate(destDir string, cfg Config) error {
 		}
 	}
 
+	// Run go mod tidy to synchronize imports
+	if err := runGoModTidy(destDir); err != nil {
+		fmt.Printf("Warning: dependencies synchronization failed: %v\n", err)
+	}
+
 	return nil
+}
+
+func runGoModTidy(destDir string) error {
+	projectName := filepath.Base(destDir)
+	if destDir == "." {
+		fmt.Println("Synchronizing dependencies (go mod tidy)...")
+	} else {
+		fmt.Printf("Moving to project folder \"%s\" and synchronizing dependencies (go mod tidy)...\n", projectName)
+	}
+
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = destDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func AddModule(module string) error {

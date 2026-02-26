@@ -136,11 +136,11 @@ func InitializeApp() *App {
 
 	{{- range .Features}}
 	{{- $dbType := index $.FeatureDBs .}}
-	{{- if eq $dbType "postgresql"}}
-	{{.}}Repo := repositories.New{{. | title}}Repository(repo.GetPostgre().GetDB(), logger)
+	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
+	{{.}}Repo := postgre.New{{. | title}}Repository(repo.GetPostgre().GetDB(), logger)
 	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase({{.}}Repo, logger)
 	{{- else}}
-	{{.}}Repo := repositories.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger)
+	{{.}}Repo := mysql.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger)
 	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase({{.}}Repo, logger)
 	{{- end}}
 	{{- end}}

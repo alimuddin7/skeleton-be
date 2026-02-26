@@ -35,6 +35,9 @@ var initCmd = &cobra.Command{
 		if primaryDb == "" {
 			primaryDb = "mysql"
 		}
+		if primaryDb == "postgres" {
+			primaryDb = "postgresql"
+		}
 
 		modules, _ := cmd.Flags().GetStringSlice("modules")
 		asynq := "No"

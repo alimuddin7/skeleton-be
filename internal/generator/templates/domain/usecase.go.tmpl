@@ -5,7 +5,13 @@ import (
 	"math"
 	"{{.ProjectName}}/models"
 	"{{.ProjectName}}/models/dto"
+	{{- if eq .RepoPackage "postgre"}}
+	"{{.ProjectName}}/repositories/postgre"
+	{{- else if eq .RepoPackage "mysql"}}
+	"{{.ProjectName}}/repositories/mysql"
+	{{- else}}
 	"{{.ProjectName}}/repositories"
+	{{- end}}
 	"github.com/rs/zerolog"
 
 	// [V1_USECASE_LOCAL_IMPORT_MARKER]
@@ -21,11 +27,11 @@ type {{.FeatureName}}Usecase interface {
 }
 
 type {{.FeatureNameLower}}Usecase struct {
-	repo repositories.{{.FeatureName}}Repository
+	repo {{.RepoPackage}}.{{.FeatureName}}Repository
 	logs zerolog.Logger
 }
 
-func New{{.FeatureName}}Usecase(repo repositories.{{.FeatureName}}Repository, logs zerolog.Logger) {{.FeatureName}}Usecase {
+func New{{.FeatureName}}Usecase(repo {{.RepoPackage}}.{{.FeatureName}}Repository, logs zerolog.Logger) {{.FeatureName}}Usecase {
 	return &{{.FeatureNameLower}}Usecase{
 		repo: repo,
 		logs: logs,

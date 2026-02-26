@@ -86,6 +86,10 @@ func AddModule(module string) error {
 		return fmt.Errorf("please use 'add host [name]' to add an external host")
 	}
 
+	if module == "postgres" {
+		module = "postgresql"
+	}
+
 	if isModulePresent(cfg, module) {
 		return nil
 	}
@@ -151,7 +155,7 @@ func AddFeature(name string) error {
 	}
 	cfg.Features = append(cfg.Features, lowerName)
 
-	featureCfg := createFeatureConfig(cfg, name, false)
+	featureCfg := createFeatureConfig(cfg, name, false, "")
 	if err := renderDomainComponents(featureCfg); err != nil {
 		return err
 	}
@@ -170,7 +174,11 @@ func AddCRUD(name, dbType string) error {
 		return err
 	}
 
-	featureCfg := createFeatureConfig(cfg, name, true)
+	if dbType == "postgres" {
+		dbType = "postgresql"
+	}
+
+	featureCfg := createFeatureConfig(cfg, name, true, dbType)
 
 	// Track feature in config for regeneration
 	lowerName := strings.ToLower(name)
@@ -244,10 +252,17 @@ func %s() {
 }
 
 func renderDomainComponents(cfg featureConfig) error {
+	repoPath := fmt.Sprintf("repositories/%s.go", cfg.FeatureNameLower)
+	if cfg.DBType == "postgresql" {
+		repoPath = fmt.Sprintf("repositories/postgre/%s.go", cfg.FeatureNameLower)
+	} else if cfg.DBType == "mysql" {
+		repoPath = fmt.Sprintf("repositories/mysql/%s.go", cfg.FeatureNameLower)
+	}
+
 	templates := map[string]string{
-		"templates/domain/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s/controller.go", cfg.FeatureNameLower),
-		"templates/domain/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s/usecase.go", cfg.FeatureNameLower),
-		"templates/domain/repository.go.tmpl": fmt.Sprintf("repositories/%s.go", cfg.FeatureNameLower),
+		"templates/domain/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s/%s.controller.go", cfg.FeatureNameLower, cfg.FeatureNameLower),
+		"templates/domain/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s/%s.usecase.go", cfg.FeatureNameLower, cfg.FeatureNameLower),
+		"templates/domain/repository.go.tmpl": repoPath,
 		"templates/domain/model.go.tmpl":      fmt.Sprintf("models/%s.go", cfg.FeatureNameLower),
 		"templates/domain/dto.go.tmpl":        fmt.Sprintf("models/dto/%s.go", cfg.FeatureNameLower),
 	}
@@ -477,14 +492,24 @@ type featureConfig struct {
 	FeatureName      string
 	FeatureNameLower string
 	IsCRUD           bool
+	DBType           string
+	RepoPackage      string
 }
 
-func createFeatureConfig(cfg *Config, name string, isCRUD bool) featureConfig {
+func createFeatureConfig(cfg *Config, name string, isCRUD bool, dbType string) featureConfig {
+	repoPkg := "repositories"
+	if dbType == "postgresql" {
+		repoPkg = "postgre"
+	} else if dbType == "mysql" {
+		repoPkg = "mysql"
+	}
 	return featureConfig{
 		ProjectName:      cfg.ProjectName,
 		FeatureName:      strings.Title(name),
 		FeatureNameLower: strings.ToLower(name),
 		IsCRUD:           isCRUD,
+		DBType:           dbType,
+		RepoPackage:      repoPkg,
 	}
 }
 

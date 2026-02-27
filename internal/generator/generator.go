@@ -244,6 +244,62 @@ func AddCRUD(name, dbType string) error {
 	return Generate(".", *cfg)
 }
 
+func RemoveCRUD(name string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	lowerName := strings.ToLower(name)
+	found := false
+	var newFeatures []string
+	for _, f := range cfg.Features {
+		if f == lowerName {
+			found = true
+			continue
+		}
+		newFeatures = append(newFeatures, f)
+	}
+
+	if !found {
+		return fmt.Errorf("feature %s not found", name)
+	}
+
+	cfg.Features = newFeatures
+	dbType := cfg.FeatureDBs[lowerName]
+	delete(cfg.FeatureDBs, lowerName)
+
+	// Determine file paths
+	repoPath := fmt.Sprintf("repositories/%s.go", lowerName)
+	if dbType == "postgresql" {
+		repoPath = fmt.Sprintf("repositories/postgre/%s.go", lowerName)
+	} else if dbType == "mysql" {
+		repoPath = fmt.Sprintf("repositories/mysql/%s.go", lowerName)
+	}
+
+	filesToRemove := []string{
+		fmt.Sprintf("controllers/v1/%s.controller.go", lowerName),
+		fmt.Sprintf("usecases/v1/%s.usecase.go", lowerName),
+		repoPath,
+		fmt.Sprintf("models/%s.go", lowerName),
+		fmt.Sprintf("models/dto/%s.go", lowerName),
+	}
+
+	for _, f := range filesToRemove {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("Warning: could not remove file %s: %v\n", f, err)
+		}
+	}
+
+	// Save updated state
+	if err := saveProjectState(".", *cfg); err != nil {
+		return err
+	}
+
+	// Regenerate base files (routers, app.go, etc.) to remove references
+	return Generate(".", *cfg)
+}
+
 func AddHelper(name string) error {
 	_, err := loadProjectState("skeleton.json")
 	if err != nil {

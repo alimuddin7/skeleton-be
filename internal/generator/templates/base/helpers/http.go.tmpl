@@ -26,8 +26,8 @@ import (
 // --- Response Formatting Section ---
 
 // ResponseFormatter formats standard API responses
-func ResponseFormatter(c fiber.Ctx, err error, lang string, count int64, page *dto.Page, data interface{}) error {
-	var res dto.Response
+func ResponseFormatter(c fiber.Ctx, err error, lang string, count int64, page *dto.Page, data any) error {
+	var res dto.Response[any]
 	var resKey string
 
 	if err != nil {

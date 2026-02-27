@@ -5,8 +5,8 @@ import (
 	"{{.ProjectName}}/models/dto"
 )
 
-func GenerateResponseHealthCheck(data ...models.DataHealthCheck) dto.Response {
-	return dto.Response{
+func GenerateResponseHealthCheck(data ...models.DataHealthCheck) dto.Response[[]models.DataHealthCheck] {
+	return dto.Response[[]models.DataHealthCheck]{
 		Data: data,
 	}
 }

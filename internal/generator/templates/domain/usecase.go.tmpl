@@ -19,11 +19,11 @@ import (
 
 {{if .IsCRUD}}
 type {{.FeatureName}}Usecase interface {
-	Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response, error)
-	Get(ctx context.Context, id int) (dto.Response, error)
-	List(ctx context.Context, page, limit int) (dto.Response, error)
-	Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response, error)
-	Delete(ctx context.Context, id int) (dto.Response, error)
+	Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response[any], error)
+	Get(ctx context.Context, id int) (dto.Response[dto.{{.FeatureName}}Response], error)
+	List(ctx context.Context, page, limit int) (dto.Response[[]dto.{{.FeatureName}}Response], error)
+	Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response[any], error)
+	Delete(ctx context.Context, id int) (dto.Response[any], error)
 }
 
 type {{.FeatureNameLower}}Usecase struct {
@@ -38,16 +38,16 @@ func New{{.FeatureName}}Usecase(repo {{.RepoPackage}}.{{.FeatureName}}Repository
 	}
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
 	data := models.{{.FeatureName}}{
 		Name: req.Name,
 	}
 	if err := u.repo.Create(ctx, &data); err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to create {{.FeatureNameLower}}")
-		return dto.Response{}, err
+		return dto.Response[any]{}, err
 	}
 
-	return dto.Response{
+	return dto.Response[any]{
 		Data: dto.{{.FeatureName}}Response{
 			ID:   data.ID,
 			Name: data.Name,
@@ -55,14 +55,14 @@ func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.F
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Response[dto.{{.FeatureName}}Response], error) {
 	data, err := u.repo.Get(ctx, id)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}}")
-		return dto.Response{}, err
+		return dto.Response[dto.{{.FeatureName}}Response]{}, err
 	}
 
-	return dto.Response{
+	return dto.Response[dto.{{.FeatureName}}Response]{
 		Data: dto.{{.FeatureName}}Response{
 			ID:   data.ID,
 			Name: data.Name,
@@ -70,12 +70,12 @@ func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Res
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int) (dto.Response[[]dto.{{.FeatureName}}Response], error) {
 	offset := (page - 1) * limit
 	data, count, err := u.repo.List(ctx, limit, offset)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to list {{.FeatureNameLower}}s")
-		return dto.Response{}, err
+		return dto.Response[[]dto.{{.FeatureName}}Response]{}, err
 	}
 
 	totalPages := int(math.Ceil(float64(count) / float64(limit)))
@@ -96,7 +96,7 @@ func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int
 		})
 	}
 
-	return dto.Response{
+	return dto.Response[[]dto.{{.FeatureName}}Response]{
 		Data:  listData,
 		Count: count,
 		Page: &dto.Page{
@@ -107,11 +107,11 @@ func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
 	existing, err := u.repo.Get(ctx, id)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}} for update")
-		return dto.Response{}, err
+		return dto.Response[any]{}, err
 	}
 
 	// Update fields
@@ -120,10 +120,10 @@ func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *
 
 	if err := u.repo.Update(ctx, existing); err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to update {{.FeatureNameLower}}")
-		return dto.Response{}, err
+		return dto.Response[any]{}, err
 	}
 
-	return dto.Response{
+	return dto.Response[any]{
 		Data: dto.{{.FeatureName}}Response{
 			ID:   existing.ID,
 			Name: existing.Name,
@@ -131,19 +131,19 @@ func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Delete(ctx context.Context, id int) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) Delete(ctx context.Context, id int) (dto.Response[any], error) {
 	if err := u.repo.Delete(ctx, id); err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to delete {{.FeatureNameLower}}")
-		return dto.Response{}, err
+		return dto.Response[any]{}, err
 	}
 
-	return dto.Response{}, nil
+	return dto.Response[any]{}, nil
 }
 {{else}}
-func (u *usecase) {{.FeatureName}}(ctx context.Context) (dto.Response, error) {
+func (u *usecase) {{.FeatureName}}(ctx context.Context) (dto.Response[any], error) {
 	// Your business logic here
 
-	return dto.Response{
+	return dto.Response[any]{
 		Data: "Welcome to {{.FeatureName}} feature",
 	}, nil
 }

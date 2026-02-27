@@ -16,7 +16,7 @@ import (
 )
 
 type Usecase interface {
-	HealthCheck(ctx context.Context) (dto.Response, error)
+	HealthCheck(ctx context.Context) (dto.Response[[]models.DataHealthCheck], error)
 	{{- range .Features}}
 	{{. | title}}() {{. | title}}Usecase
 	{{- end}}
@@ -63,7 +63,7 @@ func InitializeV1Usecase(
 	}
 }
 
-func (u *usecase) HealthCheck(ctx context.Context) (dto.Response, error) {
+func (u *usecase) HealthCheck(ctx context.Context) (dto.Response[[]models.DataHealthCheck], error) {
 	var healthChecks []models.DataHealthCheck
 	
 	{{- if .Modules}}

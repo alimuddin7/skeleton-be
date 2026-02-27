@@ -47,10 +47,6 @@ import (
 	{{- end}}
 	{{- end}}
 
-	{{- range .Features}}
-	{{.}}Uc "{{$.ProjectName}}/usecases/v1/{{.}}"
-	{{.}}Ctrl "{{$.ProjectName}}/controllers/v1/{{.}}"
-	{{- end}}
 	// [APP_IMPORT_MARKER]
 
 	"github.com/gofiber/fiber/v3"
@@ -138,10 +134,10 @@ func InitializeApp() *App {
 	{{- $dbType := index $.FeatureDBs .}}
 	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
 	{{.}}Repo := postgre.New{{. | title}}Repository(repo.GetPostgre().GetDB(), logger)
-	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase({{.}}Repo, logger)
+	{{.}}Usecase := v1Usecases.New{{. | title}}Usecase({{.}}Repo, logger)
 	{{- else}}
 	{{.}}Repo := mysql.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger)
-	{{.}}Usecase := {{.}}Uc.New{{. | title}}Usecase({{.}}Repo, logger)
+	{{.}}Usecase := v1Usecases.New{{. | title}}Usecase({{.}}Repo, logger)
 	{{- end}}
 	{{- end}}
 	v1Usecase := v1Usecases.InitializeV1Usecase(
@@ -156,7 +152,7 @@ func InitializeApp() *App {
 
 	// --- Controllers ---
 	{{- range .Features}}
-	{{.}}Controller := {{.}}Ctrl.New{{. | title}}Controller({{.}}Usecase)
+	{{.}}Controller := v1Controllers.New{{. | title}}Controller({{.}}Usecase)
 	{{- end}}
 	v1Ctrl := v1Controllers.InitializeV1Controller(
 		v1Usecase, 

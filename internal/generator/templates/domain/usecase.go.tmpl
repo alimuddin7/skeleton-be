@@ -1,4 +1,4 @@
-package {{.FeatureNameLower}}
+package usecases
 
 import (
 	"context"
@@ -19,10 +19,10 @@ import (
 
 {{if .IsCRUD}}
 type {{.FeatureName}}Usecase interface {
-	Create(ctx context.Context, req *dto.{{.FeatureName}}) (dto.Response, error)
+	Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response, error)
 	Get(ctx context.Context, id int) (dto.Response, error)
 	List(ctx context.Context, page, limit int) (dto.Response, error)
-	Update(ctx context.Context, id int, req *dto.{{.FeatureName}}) (dto.Response, error)
+	Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response, error)
 	Delete(ctx context.Context, id int) (dto.Response, error)
 }
 
@@ -38,7 +38,7 @@ func New{{.FeatureName}}Usecase(repo {{.RepoPackage}}.{{.FeatureName}}Repository
 	}
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.FeatureName}}) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response, error) {
 	data := models.{{.FeatureName}}{
 		Name: req.Name,
 	}
@@ -48,7 +48,10 @@ func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.F
 	}
 
 	return dto.Response{
-		Data: data,
+		Data: dto.{{.FeatureName}}Response{
+			ID:   data.ID,
+			Name: data.Name,
+		},
 	}, nil
 }
 
@@ -60,7 +63,10 @@ func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Res
 	}
 
 	return dto.Response{
-		Data: data,
+		Data: dto.{{.FeatureName}}Response{
+			ID:   data.ID,
+			Name: data.Name,
+		},
 	}, nil
 }
 
@@ -82,8 +88,16 @@ func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int
 		nextPage = 0
 	}
 
+	var listData []dto.{{.FeatureName}}Response
+	for _, v := range data {
+		listData = append(listData, dto.{{.FeatureName}}Response{
+			ID:   v.ID,
+			Name: v.Name,
+		})
+	}
+
 	return dto.Response{
-		Data:  data,
+		Data:  listData,
 		Count: count,
 		Page: &dto.Page{
 			CurrentPage:  page,
@@ -93,7 +107,7 @@ func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *dto.{{.FeatureName}}) (dto.Response, error) {
+func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response, error) {
 	existing, err := u.repo.Get(ctx, id)
 	if err != nil {
 		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}} for update")
@@ -110,7 +124,10 @@ func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *
 	}
 
 	return dto.Response{
-		Data: existing,
+		Data: dto.{{.FeatureName}}Response{
+			ID:   existing.ID,
+			Name: existing.Name,
+		},
 	}, nil
 }
 

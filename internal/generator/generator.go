@@ -224,8 +224,6 @@ func AddCRUD(name, dbType string) error {
 		"repositories",
 		"models",
 		"models/dto",
-		fmt.Sprintf("controllers/v1/%s", featureCfg.FeatureNameLower),
-		fmt.Sprintf("usecases/v1/%s", featureCfg.FeatureNameLower),
 	}
 
 	for _, dir := range dirs {
@@ -281,8 +279,8 @@ func renderDomainComponents(cfg featureConfig) error {
 	}
 
 	templates := map[string]string{
-		"templates/domain/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s/%s.controller.go", cfg.FeatureNameLower, cfg.FeatureNameLower),
-		"templates/domain/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s/%s.usecase.go", cfg.FeatureNameLower, cfg.FeatureNameLower),
+		"templates/domain/controller.go.tmpl": fmt.Sprintf("controllers/v1/%s.controller.go", cfg.FeatureNameLower),
+		"templates/domain/usecase.go.tmpl":    fmt.Sprintf("usecases/v1/%s.usecase.go", cfg.FeatureNameLower),
 		"templates/domain/repository.go.tmpl": repoPath,
 		"templates/domain/model.go.tmpl":      fmt.Sprintf("models/%s.go", cfg.FeatureNameLower),
 		"templates/domain/dto.go.tmpl":        fmt.Sprintf("models/dto/%s.go", cfg.FeatureNameLower),
@@ -427,8 +425,8 @@ func getBaseTemplates() map[string]string {
 		"templates/base/helpers/middleware.go.tmpl":                 "helpers/middleware.go",
 		"templates/base/helpers/logger.go.tmpl":                     "helpers/logger.go",
 		"templates/base/controllers/controller.go.tmpl":             "controllers/controller.go",
-		"templates/base/controllers/v1/v1_controller.go.tmpl":       "controllers/v1/controller.go",
-		"templates/base/usecases/v1/usecase.go.tmpl":                "usecases/v1/usecase.go",
+		"templates/base/controllers/v1/v1_controller.go.tmpl":       "controllers/v1/v1.controller.go",
+		"templates/base/usecases/v1/usecase.go.tmpl":                "usecases/v1/v1.usecase.go",
 		"templates/base/configs/config.go.tmpl":                     "configs/config.go",
 		"templates/base/helpers/hc_helpers.go.tmpl":                 "helpers/health.go",
 		"templates/base/helpers/utils.go.tmpl":                      "helpers/utils.go",

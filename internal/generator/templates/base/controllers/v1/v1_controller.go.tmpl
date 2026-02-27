@@ -8,16 +8,13 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
-	{{- range .Features}}
-	{{.}}Ctrl "{{$.ProjectName}}/controllers/v1/{{.}}"
-	{{- end}}
 	// [V1_CONTROLLER_IMPORT_MARKER]
 )
 
 type V1Controller interface {
 	HealthCheck(c fiber.Ctx) error
 	{{- range .Features}}
-	{{. | title}}() {{.}}Ctrl.{{. | title}}Controller
+	{{. | title}}() {{. | title}}Controller
 	{{- end}}
 	// [V1_CONTROLLER_INTERFACE_MARKER]
 }
@@ -27,7 +24,7 @@ type v1Controller struct {
 	Logs      zerolog.Logger
 	Validator *validator.Validate
 	{{- range .Features}}
-	{{.}} {{.}}Ctrl.{{. | title}}Controller
+	{{. | title}}Controller {{. | title}}Controller
 	{{- end}}
 	// [V1_CONTROLLER_IMPL_MARKER]
 }
@@ -36,7 +33,7 @@ func InitializeV1Controller(
 	usecases v1Usecases.Usecase,
 	l zerolog.Logger,
 	{{- range .Features}}
-	{{.}} {{.}}Ctrl.{{. | title}}Controller,
+	{{. | untitle}} {{. | title}}Controller,
 	{{- end}}
 ) V1Controller {
 	return &v1Controller{
@@ -44,7 +41,7 @@ func InitializeV1Controller(
 		Logs:      l,
 		Validator: CustomValidator(),
 		{{- range .Features}}
-		{{.}}: {{.}},
+		{{. | title}}Controller: {{. | untitle}},
 		{{- end}}
 	}
 }
@@ -71,7 +68,7 @@ func (ctrl *v1Controller) HealthCheck(c fiber.Ctx) error {
 }
 
 {{- range .Features}}
-func (ctrl *v1Controller) {{. | title}}() {{.}}Ctrl.{{. | title}}Controller {
-	return ctrl.{{.}}
+func (ctrl *v1Controller) {{. | title}}() {{. | title}}Controller {
+	return ctrl.{{. | title}}Controller
 }
 {{- end}}

@@ -1,12 +1,12 @@
-package {{.FeatureNameLower}}
+package controllers
 
 import (
 	"{{.ProjectName}}/models/dto"
 	"{{.ProjectName}}/helpers"
-	{{if .IsCRUD}}
-	usecase "{{.ProjectName}}/usecases/v1/{{.FeatureNameLower}}"
+	{{- if .IsCRUD}}
+	usecases "{{.ProjectName}}/usecases/v1"
 	"strconv"
-	{{end}}
+	{{- end}}
 
 	"github.com/gofiber/fiber/v3"
 
@@ -23,17 +23,17 @@ type {{.FeatureName}}Controller interface {
 }
 
 type {{.FeatureNameLower}}Controller struct {
-	usecase usecase.{{.FeatureName}}Usecase
+	usecase usecases.{{.FeatureName}}Usecase
 }
 
-func New{{.FeatureName}}Controller(u usecase.{{.FeatureName}}Usecase) {{.FeatureName}}Controller {
+func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.FeatureName}}Controller {
 	return &{{.FeatureNameLower}}Controller{
 		usecase: u,
 	}
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
-	var req dto.{{.FeatureName}}
+	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
 		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
@@ -72,7 +72,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}
 
-	var req dto.{{.FeatureName}}
+	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
 		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
 	}

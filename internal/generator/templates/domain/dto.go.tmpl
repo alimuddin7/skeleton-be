@@ -1,7 +1,12 @@
 package dto
 
-type {{.FeatureName}} struct {
+type {{.FeatureName}}Request struct {
+	Name string `json:"name"`
+	// Add other request fields here
+}
+
+type {{.FeatureName}}Response struct {
 	ID   uint   `json:"id"`
 	Name string `json:"name"`
-	// Add other fields here
+	// Add other response fields here
 }

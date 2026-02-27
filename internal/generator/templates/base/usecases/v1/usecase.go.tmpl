@@ -12,16 +12,13 @@ import (
 	{{- if .Hosts}}
 	"{{.ProjectName}}/hosts"
 	{{- end}}
-	{{- range .Features}}
-	{{.}}Uc "{{$.ProjectName}}/usecases/v1/{{.}}"
-	{{- end}}
 	// [V1_USECASE_IMPORT_MARKER]
 )
 
 type Usecase interface {
 	HealthCheck(ctx context.Context) (dto.Response, error)
 	{{- range .Features}}
-	{{. | title}}() {{.}}Uc.{{. | title}}Usecase
+	{{. | title}}() {{. | title}}Usecase
 	{{- end}}
 	// [V1_USECASE_INTERFACE_MARKER]
 }
@@ -35,7 +32,7 @@ type usecase struct {
 	{{- end}}
 	Logs zerolog.Logger
 	{{- range .Features}}
-	{{.}} {{.}}Uc.{{. | title}}Usecase
+	{{. | title}}Usecase {{. | title}}Usecase
 	{{- end}}
 	// [V1_USECASE_IMPL_MARKER]
 }
@@ -49,7 +46,7 @@ func InitializeV1Usecase(
 	{{- end}}
 	l zerolog.Logger,
 	{{- range .Features}}
-	{{.}} {{.}}Uc.{{. | title}}Usecase,
+	{{. | untitle}} {{. | title}}Usecase,
 	{{- end}}
 ) Usecase {
 	return &usecase{
@@ -61,7 +58,7 @@ func InitializeV1Usecase(
 		{{- end}}
 		Logs: l,
 		{{- range .Features}}
-		{{.}}: {{.}},
+		{{. | title}}Usecase: {{. | untitle}},
 		{{- end}}
 	}
 }
@@ -98,7 +95,7 @@ func (u *usecase) HealthCheck(ctx context.Context) (dto.Response, error) {
 }
 
 {{- range .Features}}
-func (u *usecase) {{. | title}}() {{.}}Uc.{{. | title}}Usecase {
-	return u.{{.}}
+func (u *usecase) {{. | title}}() {{. | title}}Usecase {
+	return u.{{. | title}}Usecase
 }
 {{- end}}

@@ -35,21 +35,21 @@ func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.Featur
 func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
 	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
-		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
 	res, err := ctr.usecase.Create(c.Context(), &req)
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Get(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
 	res, err := ctr.usecase.Get(c.Context(), id)
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) List(c fiber.Ctx) error {
@@ -63,32 +63,32 @@ func (ctr *{{.FeatureNameLower}}Controller) List(c fiber.Ctx) error {
 	}
 
 	res, err := ctr.usecase.List(c.Context(), page, limit)
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
 	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
-		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
 	res, err := ctr.usecase.Update(c.Context(), id, &req)
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return helpers.ResponseFormatter(c, err, "", 0, nil, nil)
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
 	res, err := ctr.usecase.Delete(c.Context(), id)
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 {{else}}
 // {{.FeatureName}} godoc
@@ -101,6 +101,6 @@ func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 // @Router /v1/{{.FeatureNameLower}} [GET]
 func (ctrl *v1Controller) {{.FeatureName}}(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.{{.FeatureName}}(c.Context())
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 {{end}}

@@ -64,7 +64,7 @@ func CustomValidator() *validator.Validate {
 
 func (ctrl *v1Controller) HealthCheck(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.HealthCheck(c.Context())
-	return helpers.ResponseFormatter(c, err, "", res.Count, res.Page, res.Data)
+	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 {{- range .Features}}

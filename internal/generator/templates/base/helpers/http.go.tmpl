@@ -26,17 +26,17 @@ import (
 // --- Response Formatting Section ---
 
 // ResponseFormatter formats standard API responses
-func ResponseFormatter(c fiber.Ctx, err error, lang string, count int64, page *dto.Page, data any) error {
-	var res dto.Response[any]
+func ResponseFormatter[T any](c fiber.Ctx, res dto.Response[T], err error, lang string) error {
 	var resKey string
 
 	if err != nil {
 		resKey = MapErrorResponse(err)
+		// Reset data and pagination when error occurs to maintain clean response
+		res.Data = *new(T)
+		res.Count = 0
+		res.Page = nil
 	} else {
 		resKey = constants.RES_SUCCESS
-		res.Data = data
-		res.Count = count
-		res.Page = page
 	}
 
 	res.Meta = GetNewMetaResponse(lang, resKey)

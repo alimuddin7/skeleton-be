@@ -3,6 +3,7 @@ package controllers
 import (
 	"{{.ProjectName}}/models/dto"
 	"{{.ProjectName}}/helpers"
+	"{{.ProjectName}}/constants"
 	{{- if .IsCRUD}}
 	usecases "{{.ProjectName}}/usecases/v1"
 	"strconv"
@@ -42,12 +43,12 @@ func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
 	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
 		ctr.Logs.Error().Err(err).Msg("failed to bind body")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_CLIENT, "")
 	}
 
 	if err := ctr.Validator.Struct(req); err != nil {
 		ctr.Logs.Error().Err(err).Msg("validation failed")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_VALIDATION, "")
 	}
 
 	res, err := ctr.Usecase.Create(c.Context(), &req)
@@ -61,7 +62,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Get(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		ctr.Logs.Error().Err(err).Msg("invalid id")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_CLIENT, "")
 	}
 
 	res, err := ctr.Usecase.Get(c.Context(), id)
@@ -92,18 +93,18 @@ func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		ctr.Logs.Error().Err(err).Msg("invalid id")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_CLIENT, "")
 	}
 
 	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
 		ctr.Logs.Error().Err(err).Msg("failed to bind body")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_CLIENT, "")
 	}
 
 	if err := ctr.Validator.Struct(req); err != nil {
 		ctr.Logs.Error().Err(err).Msg("validation failed")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_VALIDATION, "")
 	}
 
 	res, err := ctr.Usecase.Update(c.Context(), id, &req)
@@ -117,7 +118,7 @@ func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		ctr.Logs.Error().Err(err).Msg("invalid id")
-		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, constants.ERR_CLIENT, "")
 	}
 
 	res, err := ctr.Usecase.Delete(c.Context(), id)

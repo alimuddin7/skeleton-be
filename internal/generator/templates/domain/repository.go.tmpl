@@ -2,6 +2,8 @@ package {{.RepoPackage}}
 
 import (
 	"context"
+	"errors"
+	"{{.ProjectName}}/constants"
 	"{{.ProjectName}}/models"
 	
 	"github.com/rs/zerolog"
@@ -35,7 +37,13 @@ func (r *{{.FeatureNameLower}}Repository) Create(ctx context.Context, data *mode
 func (r *{{.FeatureNameLower}}Repository) Get(ctx context.Context, id int) (*models.{{.FeatureName}}, error) {
 	var data models.{{.FeatureName}}
 	err := r.db.WithContext(ctx).First(&data, id).Error
-	return &data, err
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, constants.ERR_NOT_FOUND
+		}
+		return nil, err
+	}
+	return &data, nil
 }
 
 func (r *{{.FeatureNameLower}}Repository) List(ctx context.Context, limit, offset int) ([]models.{{.FeatureName}}, int64, error) {
@@ -51,9 +59,23 @@ func (r *{{.FeatureNameLower}}Repository) List(ctx context.Context, limit, offse
 }
 
 func (r *{{.FeatureNameLower}}Repository) Update(ctx context.Context, data *models.{{.FeatureName}}) error {
-	return r.db.WithContext(ctx).Save(data).Error
+	db := r.db.WithContext(ctx).Save(data)
+	if db.Error != nil {
+		return db.Error
+	}
+	if db.RowsAffected == 0 {
+		return constants.ERR_NOT_FOUND
+	}
+	return nil
 }
 
 func (r *{{.FeatureNameLower}}Repository) Delete(ctx context.Context, id int) error {
-	return r.db.WithContext(ctx).Delete(&models.{{.FeatureName}}{}, id).Error
+	db := r.db.WithContext(ctx).Delete(&models.{{.FeatureName}}{}, id)
+	if db.Error != nil {
+		return db.Error
+	}
+	if db.RowsAffected == 0 {
+		return constants.ERR_NOT_FOUND
+	}
+	return nil
 }

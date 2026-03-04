@@ -6,6 +6,8 @@ import (
 	{{- if .IsCRUD}}
 	usecases "{{.ProjectName}}/usecases/v1"
 	"strconv"
+	"github.com/rs/zerolog"
+	"github.com/go-playground/validator/v10"
 	{{- end}}
 
 	"github.com/gofiber/fiber/v3"
@@ -23,32 +25,49 @@ type {{.FeatureName}}Controller interface {
 }
 
 type {{.FeatureNameLower}}Controller struct {
-	usecase usecases.{{.FeatureName}}Usecase
+	Usecase   usecases.{{.FeatureName}}Usecase
+	Logs      zerolog.Logger
+	Validator *validator.Validate
 }
 
-func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase) {{.FeatureName}}Controller {
+func New{{.FeatureName}}Controller(u usecases.{{.FeatureName}}Usecase, l zerolog.Logger, v *validator.Validate) {{.FeatureName}}Controller {
 	return &{{.FeatureNameLower}}Controller{
-		usecase: u,
+		Usecase:   u,
+		Logs:      l,
+		Validator: v,
 	}
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Create(c fiber.Ctx) error {
 	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to bind body")
 		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
-	res, err := ctr.usecase.Create(c.Context(), &req)
+	if err := ctr.Validator.Struct(req); err != nil {
+		ctr.Logs.Error().Err(err).Msg("validation failed")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+	}
+
+	res, err := ctr.Usecase.Create(c.Context(), &req)
+	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to create")
+	}
 	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Get(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("invalid id")
 		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
-	res, err := ctr.usecase.Get(c.Context(), id)
+	res, err := ctr.Usecase.Get(c.Context(), id)
+	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to get")
+	}
 	return helpers.ResponseFormatter(c, res, err, "")
 }
 
@@ -62,32 +81,49 @@ func (ctr *{{.FeatureNameLower}}Controller) List(c fiber.Ctx) error {
 		limit = 10
 	}
 
-	res, err := ctr.usecase.List(c.Context(), page, limit)
+	res, err := ctr.Usecase.List(c.Context(), page, limit)
+	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to list")
+	}
 	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Update(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("invalid id")
 		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
 	var req dto.{{.FeatureName}}Request
 	if err := c.Bind().Body(&req); err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to bind body")
 		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
-	res, err := ctr.usecase.Update(c.Context(), id, &req)
+	if err := ctr.Validator.Struct(req); err != nil {
+		ctr.Logs.Error().Err(err).Msg("validation failed")
+		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
+	}
+
+	res, err := ctr.Usecase.Update(c.Context(), id, &req)
+	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to update")
+	}
 	return helpers.ResponseFormatter(c, res, err, "")
 }
 
 func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("invalid id")
 		return helpers.ResponseFormatter(c, dto.Response[any]{}, err, "")
 	}
 
-	res, err := ctr.usecase.Delete(c.Context(), id)
+	res, err := ctr.Usecase.Delete(c.Context(), id)
+	if err != nil {
+		ctr.Logs.Error().Err(err).Msg("failed to delete")
+	}
 	return helpers.ResponseFormatter(c, res, err, "")
 }
 {{else}}
@@ -101,6 +137,9 @@ func (ctr *{{.FeatureNameLower}}Controller) Delete(c fiber.Ctx) error {
 // @Router /v1/{{.FeatureNameLower}} [GET]
 func (ctrl *v1Controller) {{.FeatureName}}(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.{{.FeatureName}}(c.Context())
+	if err != nil {
+		ctrl.Logs.Error().Err(err).Msg("failed to execute {{.FeatureName}}")
+	}
 	return helpers.ResponseFormatter(c, res, err, "")
 }
 {{end}}

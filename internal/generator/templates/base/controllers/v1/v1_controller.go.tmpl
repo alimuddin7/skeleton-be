@@ -32,6 +32,7 @@ type v1Controller struct {
 func InitializeV1Controller(
 	usecases v1Usecases.Usecase,
 	l zerolog.Logger,
+	v *validator.Validate,
 	{{- range .Features}}
 	{{. | untitle}} {{. | title}}Controller,
 	{{- end}}
@@ -39,7 +40,7 @@ func InitializeV1Controller(
 	return &v1Controller{
 		Usecase:   usecases,
 		Logs:      l,
-		Validator: CustomValidator(),
+		Validator: v,
 		{{- range .Features}}
 		{{. | title}}Controller: {{. | untitle}},
 		{{- end}}

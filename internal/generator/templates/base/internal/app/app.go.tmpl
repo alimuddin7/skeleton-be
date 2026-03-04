@@ -151,12 +151,14 @@ func InitializeApp() *App {
 	// [APP_USECASE_INIT_MARKER]
 
 	// --- Controllers ---
+	v := v1Controllers.CustomValidator()
 	{{- range .Features}}
-	{{.}}Controller := v1Controllers.New{{. | title}}Controller({{.}}Usecase)
+	{{.}}Controller := v1Controllers.New{{. | title}}Controller({{.}}Usecase, logger, v)
 	{{- end}}
 	v1Ctrl := v1Controllers.InitializeV1Controller(
 		v1Usecase, 
 		logger,
+		v,
 		{{- range .Features}}
 		{{.}}Controller,
 		{{- end}}

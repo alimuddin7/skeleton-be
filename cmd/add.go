@@ -15,6 +15,7 @@ var addCmd = &cobra.Command{
 }
 
 var addModuleCmd = &cobra.Command{
+	Use:   "module [name]",
 	Short: "Add an infrastructure module",
 	Long:  "Add infrastructure modules such as mysql, postgresql, redis, redis-cluster, kafka, nats, or minio.",
 	Args:  cobra.MaximumNArgs(1),

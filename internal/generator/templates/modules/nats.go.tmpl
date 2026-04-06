@@ -1,25 +1,30 @@
 package nats
 
 import (
-	"strings"
+	"context"
 	"{{.ProjectName}}/configs"
+	"strings"
+
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/rs/zerolog"
 )
 
 type (
 	natsRepository struct {
 		Conn *nats.Conn
-		JS   nats.JetStreamContext
+		JS   jetstream.JetStream
 		Logs zerolog.Logger
 	}
 	NatsRepository interface {
 		GetConn() *nats.Conn
-		GetJS() nats.JetStreamContext
+		GetJS() jetstream.JetStream
+		Publish(ctx context.Context, subject string, data []byte) (*jetstream.PubAck, error)
+		Consume(ctx context.Context, streamName, consumerName string, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error)
 	}
 )
 
-func InitializeNatsRepository(nc *nats.Conn, js nats.JetStreamContext, log zerolog.Logger) NatsRepository {
+func InitializeNatsRepository(nc *nats.Conn, js jetstream.JetStream, log zerolog.Logger) NatsRepository {
 	return &natsRepository{
 		Conn: nc,
 		JS:   js,
@@ -27,7 +32,7 @@ func InitializeNatsRepository(nc *nats.Conn, js nats.JetStreamContext, log zerol
 	}
 }
 
-func ConnectNats(log zerolog.Logger) (*nats.Conn, nats.JetStreamContext) {
+func ConnectNats(log zerolog.Logger) (*nats.Conn, jetstream.JetStream) {
 	conf := configs.Cfg.Database.Nats
 	nc, err := nats.Connect(strings.Join(conf.Servers, ","),
 		nats.UserInfo(conf.Username, conf.Password),
@@ -37,7 +42,7 @@ func ConnectNats(log zerolog.Logger) (*nats.Conn, nats.JetStreamContext) {
 		panic(err)
 	}
 
-	js, err := nc.JetStream()
+	js, err := jetstream.New(nc)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to initialize JetStream")
 		panic(err)
@@ -51,6 +56,18 @@ func (n *natsRepository) GetConn() *nats.Conn {
 	return n.Conn
 }
 
-func (n *natsRepository) GetJS() nats.JetStreamContext {
+func (n *natsRepository) GetJS() jetstream.JetStream {
 	return n.JS
+}
+
+func (n *natsRepository) Publish(ctx context.Context, subject string, data []byte) (*jetstream.PubAck, error) {
+	return n.JS.Publish(ctx, subject, data)
+}
+
+func (n *natsRepository) Consume(ctx context.Context, streamName, consumerName string, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error) {
+	cons, err := n.JS.Consumer(ctx, streamName, consumerName)
+	if err != nil {
+		return nil, err
+	}
+	return cons.Consume(handler)
 }

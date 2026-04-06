@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 //go:embed templates
@@ -65,7 +68,7 @@ func Generate(destDir string, cfg Config) error {
 			ProjectName:   cfg.ProjectName,
 			HostName:      host,
 			HostNameLower: lowerName,
-			HostNameTitle: strings.Title(host),
+			HostNameTitle: cases.Title(language.Und).String(host),
 		}
 		if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
 			return err
@@ -150,7 +153,7 @@ func AddHost(name string) error {
 		ProjectName:   cfg.ProjectName,
 		HostName:      name,
 		HostNameLower: lowerName,
-		HostNameTitle: strings.Title(name),
+		HostNameTitle: cases.Title(language.Und).String(name),
 	}
 
 	if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
@@ -321,7 +324,7 @@ import "fmt"
 func %s() {
 	fmt.Println("Hello from %s helper")
 }
-`, strings.Title(helperName), strings.Title(helperName), strings.Title(helperName))
+`, cases.Title(language.Und).String(helperName), cases.Title(language.Und).String(helperName), cases.Title(language.Und).String(helperName))
 
 	return os.WriteFile(fileName, []byte(content), 0644)
 }
@@ -364,7 +367,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
 		"routers", "models", "models/dto", "errorcodes", "docker", "migrations", "helpers", "helpers/models",
-		"internal/app",
+		"internal/app", "consumers",
 		".gitlab", ".gitlab/ci", ".gitlab/script",
 	}
 
@@ -560,6 +563,10 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 		}
 	}
 
+	// Add consumers if project type is Worker and NATS is present
+	if isProjectTypePresent(cfg, "Worker") && isModulePresent(&cfg, "nats") {
+		templates["templates/base/consumers/main.go.tmpl"] = "consumers/main.go"
+	}
 }
 
 type featureConfig struct {
@@ -580,7 +587,7 @@ func createFeatureConfig(cfg *Config, name string, isCRUD bool, dbType string) f
 	}
 	return featureConfig{
 		ProjectName:      cfg.ProjectName,
-		FeatureName:      strings.Title(name),
+		FeatureName:      cases.Title(language.Und).String(name),
 		FeatureNameLower: strings.ToLower(name),
 		IsCRUD:           isCRUD,
 		DBType:           dbType,
@@ -590,17 +597,17 @@ func createFeatureConfig(cfg *Config, name string, isCRUD bool, dbType string) f
 
 // Remove renderFeatureComponents as it is superseded by renderDomainComponents
 
-func injectBelowMarker(filePath, marker, code string) error {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return err // Could be missing if called prematurely
-	}
-	if bytes.Contains(content, []byte(code)) {
-		return nil
-	}
-	newContent := bytes.Replace(content, []byte(marker), []byte(marker+"\n"+code), 1)
-	return os.WriteFile(filePath, newContent, 0644)
-}
+// func injectBelowMarker(filePath, marker, code string) error {
+// 	content, err := os.ReadFile(filePath)
+// 	if err != nil {
+// 		return err // Could be missing if called prematurely
+// 	}
+// 	if bytes.Contains(content, []byte(code)) {
+// 		return nil
+// 	}
+// 	newContent := bytes.Replace(content, []byte(marker), []byte(marker+"\n"+code), 1)
+// 	return os.WriteFile(filePath, newContent, 0644)
+// }
 
 func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 	content, err := templateFS.ReadFile(tmplPath)
@@ -617,7 +624,7 @@ func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 	}
 
 	tmpl, err := template.New(filepath.Base(tmplPath)).Funcs(template.FuncMap{
-		"title": strings.Title,
+		"title": func(s string) string { return cases.Title(language.Und).String(s) },
 		"upper": strings.ToUpper,
 		"untitle": func(s string) string {
 			if len(s) == 0 {

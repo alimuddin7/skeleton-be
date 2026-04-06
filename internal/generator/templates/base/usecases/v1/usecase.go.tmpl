@@ -3,6 +3,9 @@ package usecases
 import (
 	"context"
 	"github.com/rs/zerolog"
+	{{- if has .Modules "nats"}}
+	"github.com/nats-io/nats.go/jetstream"
+	{{- end}}
 	"{{.ProjectName}}/models"
 	"{{.ProjectName}}/models/dto"
 	"{{.ProjectName}}/helpers"
@@ -21,6 +24,9 @@ type Usecase interface {
 	{{. | title}}() {{. | title}}Usecase
 	{{- end}}
 	// [V1_USECASE_INTERFACE_MARKER]
+	{{- if has .Modules "nats"}}
+	ExampleNatsHandler(msg jetstream.Msg)
+	{{- end}}
 }
 
 type usecase struct {
@@ -97,5 +103,15 @@ func (u *usecase) HealthCheck(ctx context.Context) (dto.Response[[]models.DataHe
 {{- range .Features}}
 func (u *usecase) {{. | title}}() {{. | title}}Usecase {
 	return u.{{. | title}}Usecase
+}
+{{- end}}
+
+{{- if has .Modules "nats"}}
+func (u *usecase) ExampleNatsHandler(msg jetstream.Msg) {
+	u.Logs.Info().Msgf("Received MSG via JetStream: %s", string(msg.Data()))
+
+	if err := msg.Ack(); err != nil {
+		u.Logs.Error().Err(err).Msg("Failed to ack message")
+	}
 }
 {{- end}}

@@ -1,0 +1,48 @@
+package consumers
+
+import (
+	"context"
+	"{{.ProjectName}}/configs"
+	"{{.ProjectName}}/repositories"
+	v1Usecases "{{.ProjectName}}/usecases/v1"
+
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/rs/zerolog"
+)
+
+// ConsumerConfig mendefinisikan konfigurasi masing-masing consumer
+type ConsumerConfig struct {
+	StreamName   string
+	ConsumerName string
+	Handler      jetstream.MessageHandler
+}
+
+// InitializeConsumers registers all NATS subscriptions for the application worker
+func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Usecase v1Usecases.Usecase, l zerolog.Logger) {
+	l.Info().Ctx(ctx).Msg("Starting NATS Consumers...")
+
+	// 1. Daftarkan seluruh stream/consumer Anda di array ini
+	consumersList := []ConsumerConfig{
+		{
+			StreamName:   configs.Cfg.Database.Nats.ExampleStream,
+			ConsumerName: configs.Cfg.Database.Nats.ExampleConsumer,
+			Handler:      v1Usecase.ExampleNatsHandler,
+		},
+	}
+
+	// 2. Loop dan Register secara dinamis
+	for _, conf := range consumersList {
+		_, err := repo.GetNats().Consume(
+			ctx,
+			conf.StreamName,
+			conf.ConsumerName,
+			conf.Handler,
+		)
+
+		if err != nil {
+			l.Error().Ctx(ctx).Err(err).Msgf("Failed to start NATS consumer [%s] for stream [%s]", conf.ConsumerName, conf.StreamName)
+		} else {
+			l.Info().Ctx(ctx).Msgf("NATS consumer started successfully [%s] -> [%s]", conf.StreamName, conf.ConsumerName)
+		}
+	}
+}

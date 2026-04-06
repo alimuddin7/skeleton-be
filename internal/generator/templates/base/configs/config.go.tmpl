@@ -38,7 +38,13 @@ type Config struct {
 		Kafka      struct { Address string `envconfig:"KAFKA_ADDRESS"`; GroupID string `envconfig:"KAFKA_GROUP_ID"` }
 		{{- end}}
 		{{- if eq . "nats"}}
-		Nats       struct { Servers []string `envconfig:"NATS_SERVERS"`; Username string `envconfig:"NATS_USERNAME"`; Password string `envconfig:"NATS_PASSWORD"` }
+		Nats       struct {
+			Servers         []string `envconfig:"NATS_SERVERS"`
+			Username        string   `envconfig:"NATS_USERNAME"`
+			Password        string   `envconfig:"NATS_PASSWORD"`
+			ExampleStream   string   `envconfig:"NATS_EXAMPLE_STREAM" default:"EXAMPLE_STREAM"`
+			ExampleConsumer string   `envconfig:"NATS_EXAMPLE_CONSUMER" default:"EXAMPLE_CONSUMER"`
+		}
 		{{- end}}
 		{{- if eq . "minio"}}
 		Minio      struct { Endpoint string `envconfig:"MINIO_ENDPOINT"`; KeyID string `envconfig:"MINIO_KEY_ID"`; Secret string `envconfig:"MINIO_SECRET"` }
@@ -85,7 +91,7 @@ type {{. | title}}Host struct {
 var Cfg Config
 
 func LoadConfig() {
-	godotenv.Load(".env")
+	_ = godotenv.Load(".env")
 	if err := envconfig.Process("", &Cfg); err != nil {
 		log.Fatalf("Failed to load from ENV: %v", err)
 	}

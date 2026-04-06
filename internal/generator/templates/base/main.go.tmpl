@@ -10,15 +10,16 @@ import (
 	"{{.ProjectName}}/configs"
 	"{{.ProjectName}}/internal/app"
 	"{{.ProjectName}}/routers"
+	{{- if and (has .ProjectTypes "Worker") (has .Modules "nats")}}
+	"{{.ProjectName}}/consumers"
+	{{- end}}
 )
 
 func main() {
 	a := app.InitializeApp()
 	logger := a.Logs
 
-	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	fiberApp := routers.InitializeRouter(a.Controller, logger)
-	{{- end}}
 
 	{{- if has .ProjectTypes "Scheduler"}}
 	a.Scheduler.StartScheduler()
@@ -35,13 +36,15 @@ func main() {
 	ctx := context.Background()
 	logger.Info().Ctx(ctx).Msg("Finish Initializing")
 
-	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
+	{{- if and (has .ProjectTypes "Worker") (has .Modules "nats")}}
+	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
+	{{- end}}
+
 	go func() {
 		if err := fiberApp.Listen(fmt.Sprintf("%s:%s", configs.Cfg.Server.Address, configs.Cfg.Server.Port)); err != nil {
 			logger.Error().Ctx(ctx).Err(err).Msg("error while running api")
 		}
 	}()
-	{{- end}}
 
 	// Graceful Shutdown
 	quit := make(chan os.Signal, 1)
@@ -50,11 +53,9 @@ func main() {
 
 	logger.Info().Ctx(ctx).Msg("Shutting down server...")
 
-	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	if err := fiberApp.Shutdown(); err != nil {
 		logger.Error().Ctx(ctx).Err(err).Msg("Server forced to shutdown")
 	}
-	{{- end}}
 
 	{{- if has .ProjectTypes "gRPC"}}
 	{{- range .Modules}}
@@ -62,5 +63,16 @@ func main() {
 	a.GrpcServer.Stop()
 	{{- end}}
 	{{- end}}
+	{{- end}}
+
+	{{- if has .Modules "nats"}}
+	if natsConn := a.Repo.GetNats().GetConn(); natsConn != nil {
+		logger.Info().Ctx(ctx).Msg("Draining NATS connection...")
+		if err := natsConn.Drain(); err != nil {
+			logger.Error().Ctx(ctx).Err(err).Msg("Error draining NATS connection")
+		} else {
+			logger.Info().Ctx(ctx).Msg("NATS connection drained successfully")
+		}
+	}
 	{{- end}}
 }

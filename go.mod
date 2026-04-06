@@ -6,6 +6,7 @@ require (
 	github.com/charmbracelet/fang v0.4.4
 	github.com/charmbracelet/huh v0.8.0
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/text v0.24.0
 )
 
 require (
@@ -48,5 +49,4 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
 )

@@ -27,7 +27,11 @@ var migrateCreateCmd = &cobra.Command{
 
 		migrationsDir := "migrations"
 		if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
-			os.Mkdir(migrationsDir, 0755)
+			err = os.Mkdir(migrationsDir, 0755)
+			if err != nil {
+				fmt.Printf("Failed to create directory %s: %v\n", migrationsDir, err)
+				return
+			}
 		}
 
 		createFile(filepath.Join(migrationsDir, upFileName))
@@ -44,7 +48,7 @@ func createFile(path string) {
 		return
 	}
 	defer f.Close()
-	f.WriteString("-- Write your migration here\n")
+	// f.WriteString("-- Write your migration here\n")
 }
 
 func init() {

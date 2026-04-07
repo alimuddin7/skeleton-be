@@ -4,6 +4,7 @@ import (
 	"context"
 	"{{.ProjectName}}/configs"
 	"strings"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -19,9 +20,9 @@ type (
 	NatsRepository interface {
 		GetConn() *nats.Conn
 		GetJS() jetstream.JetStream
-		Publish(ctx context.Context, stream, subject string, data []byte) (*jetstream.PubAck, error)
-		Consume(ctx context.Context, stream, subject, consumerName string, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error)
-		CreateStream(ctx context.Context, streamName string, subjects []string) (jetstream.Stream, error)
+		Publish(ctx context.Context, stream, subject string, ttl time.Duration, data []byte) (*jetstream.PubAck, error)
+		Consume(ctx context.Context, stream, subject, consumerName string, ttl time.Duration, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error)
+		CreateStream(ctx context.Context, streamName string, subjects []string, ttl time.Duration) (jetstream.Stream, error)
 	}
 )
 
@@ -61,18 +62,18 @@ func (n *natsRepository) GetJS() jetstream.JetStream {
 	return n.JS
 }
 
-func (n *natsRepository) Publish(ctx context.Context, stream, subject string, data []byte) (*jetstream.PubAck, error) {
+func (n *natsRepository) Publish(ctx context.Context, stream, subject string, ttl time.Duration, data []byte) (*jetstream.PubAck, error) {
 	// Auto create stream using subject as stream name if it doesn't exist
-	_, err := n.CreateStream(ctx, stream, []string{subject})
+	_, err := n.CreateStream(ctx, stream, []string{subject}, ttl)
 	if err != nil {
 		n.Logs.Warn().Err(err).Str("stream", stream).Msg("Failed to auto-create stream during Publish (might already exist or subject/stream mismatch)")
 	}
 	return n.JS.Publish(ctx, subject, data)
 }
 
-func (n *natsRepository) Consume(ctx context.Context, stream, subject, consumerName string, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error) {
+func (n *natsRepository) Consume(ctx context.Context, stream, subject, consumerName string, ttl time.Duration, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error) {
 	// Auto create stream if it doesn't exist
-	_, err := n.CreateStream(ctx, stream, []string{subject})
+	_, err := n.CreateStream(ctx, stream, []string{subject}, ttl)
 	if err != nil {
 		n.Logs.Warn().Err(err).Str("stream", stream).Msg("Failed to auto-create stream during Consume")
 	}
@@ -87,9 +88,10 @@ func (n *natsRepository) Consume(ctx context.Context, stream, subject, consumerN
 	return cons.Consume(handler)
 }
 
-func (n *natsRepository) CreateStream(ctx context.Context, streamName string, subjects []string) (jetstream.Stream, error) {
+func (n *natsRepository) CreateStream(ctx context.Context, streamName string, subjects []string, ttl time.Duration) (jetstream.Stream, error) {
 	return n.JS.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:     streamName,
 		Subjects: subjects,
+		MaxAge:   ttl,
 	})
 }

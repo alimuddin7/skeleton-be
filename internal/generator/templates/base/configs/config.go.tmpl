@@ -42,8 +42,8 @@ type Config struct {
 			Servers         []string `envconfig:"NATS_SERVERS"`
 			Username        string   `envconfig:"NATS_USERNAME"`
 			Password        string   `envconfig:"NATS_PASSWORD"`
-			ExampleStream   string   `envconfig:"NATS_EXAMPLE_STREAM" default:"EXAMPLE_STREAM"`
-			ExampleConsumer string   `envconfig:"NATS_EXAMPLE_CONSUMER" default:"EXAMPLE_CONSUMER"`
+			ExampleStream   string   `envconfig:"NATS_EXAMPLE_STREAM"`
+			ExampleSubject string   `envconfig:"NATS_EXAMPLE_SUBJECT"`
 		}
 		{{- end}}
 		{{- if eq . "minio"}}

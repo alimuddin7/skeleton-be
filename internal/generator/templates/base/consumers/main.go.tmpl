@@ -13,19 +13,20 @@ import (
 // ConsumerConfig mendefinisikan konfigurasi masing-masing consumer
 type ConsumerConfig struct {
 	StreamName   string
-	ConsumerName string
+	SubjectName string
 	Handler      jetstream.MessageHandler
 }
 
 // InitializeConsumers registers all NATS subscriptions for the application worker
 func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Usecase v1Usecases.Usecase, l zerolog.Logger) {
 	l.Info().Ctx(ctx).Msg("Starting NATS Consumers...")
+	consumerName := configs.Cfg.General.ServiceName
 
 	// 1. Daftarkan seluruh stream/consumer Anda di array ini
 	consumersList := []ConsumerConfig{
 		{
 			StreamName:   configs.Cfg.Database.Nats.ExampleStream,
-			ConsumerName: configs.Cfg.Database.Nats.ExampleConsumer,
+			SubjectName: configs.Cfg.Database.Nats.ExampleSubject,
 			Handler:      v1Usecase.ExampleNatsHandler,
 		},
 	}
@@ -35,14 +36,15 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Us
 		_, err := repo.GetNats().Consume(
 			ctx,
 			conf.StreamName,
-			conf.ConsumerName,
+			conf.SubjectName,
+			consumerName,
 			conf.Handler,
 		)
 
 		if err != nil {
-			l.Error().Ctx(ctx).Err(err).Msgf("Failed to start NATS consumer [%s] for stream [%s]", conf.ConsumerName, conf.StreamName)
+			l.Error().Ctx(ctx).Err(err).Msgf("Failed to start NATS consumer [%s] for stream [%s]", conf.SubjectName, conf.StreamName)
 		} else {
-			l.Info().Ctx(ctx).Msgf("NATS consumer started successfully [%s] -> [%s]", conf.StreamName, conf.ConsumerName)
+			l.Info().Ctx(ctx).Msgf("NATS consumer started successfully [%s] -> [%s]", conf.StreamName, conf.SubjectName)
 		}
 	}
 }

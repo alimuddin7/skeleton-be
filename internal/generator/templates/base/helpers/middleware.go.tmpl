@@ -22,8 +22,8 @@ func TracingMiddleware() fiber.Handler {
 		
 		// 2. Inject into UserContext for standard context.Context propagation
 		// This is what zerolog.Ctx(ctx) will look for via the TraceIDHook
-		ctx := context.WithValue(c.UserContext(), constants.TRANSACTION_ID, traceID)
-		c.SetUserContext(ctx)
+		ctx := context.WithValue(c.Context(), constants.TRANSACTION_ID, traceID)
+		c.SetContext(ctx)
 		
 		c.Set("X-Trace-Id", traceID)
 		return c.Next()

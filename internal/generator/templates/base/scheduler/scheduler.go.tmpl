@@ -41,11 +41,11 @@ func (s *scheduler) StartScheduler() error {
 	})
 
 	if err != nil {
-		s.Logs.Error().Err(err).Msg("Failed to add cron job")
+		s.Logs.Error().Ctx(context.Background()).Err(err).Msg("Failed to add cron job")
 		return err
 	}
 
 	c.Start()
-	s.Logs.Info().Msgf("Cron job started with schedule: %s", taskTime)
+	s.Logs.Info().Ctx(context.Background()).Msgf("Cron job started with schedule: %s", taskTime)
 	return nil
 }

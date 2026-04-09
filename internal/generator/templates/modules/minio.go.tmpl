@@ -24,17 +24,17 @@ func InitializeMinioRepository(client *minio.Client, log zerolog.Logger) MinioRe
 	}
 }
 
-func ConnectMinio(log zerolog.Logger) *minio.Client {
+func ConnectMinio(ctx context.Context, log zerolog.Logger) *minio.Client {
 	conf := configs.Cfg.Database.Minio
 	client, err := minio.New(conf.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(conf.KeyID, conf.Secret, ""),
 		Secure: true,
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Error open minio connection")
+		log.Error().Ctx(ctx).Err(err).Msg("Error open minio connection")
 		panic(err)
 	}
-	log.Info().Msg("Minio connected successfully")
+	log.Info().Ctx(ctx).Msg("Minio connected successfully")
 	return client
 }
 

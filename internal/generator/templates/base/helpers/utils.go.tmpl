@@ -13,6 +13,7 @@ import (
 	"{{.ProjectName}}/models/dto"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/leekchan/accounting"
 	"github.com/rs/zerolog/log"
@@ -226,4 +227,9 @@ func ErrorValidator(err error) string {
 		return strings.Join(errorMessages, ", ")
 	}
 	return err.Error()
+}
+
+// GenerateTransactionID generates a unique identifier for tracing
+func GenerateTransactionID() string {
+	return uuid.New().String()
 }

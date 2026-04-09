@@ -17,12 +17,25 @@ import (
 	"gorm.io/gorm/utils"
 )
 
+// TraceIDHook is a zerolog hook to add traceID from context to every log message
+type TraceIDHook struct{}
+
+func (h TraceIDHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	ctx := e.GetCtx()
+	if ctx != nil {
+		if traceID, ok := ctx.Value(constants.TRANSACTION_ID).(string); ok {
+			// Using "traceID" label to match user's middleware fix
+			e.Str("traceID", traceID)
+		}
+	}
+}
+
 // InitializeZeroLogs initializes the application logger
 func InitializeZeroLogs() zerolog.Logger {
 	output := os.Stdout
 	// Add file based logging logic if needed (from configs)
 	
-	logger := zerolog.New(output).With().Timestamp().Str("service", configs.Cfg.General.ServiceName).Logger()
+	logger := zerolog.New(output).With().Timestamp().Str("service", configs.Cfg.General.ServiceName).Logger().Hook(TraceIDHook{})
 	return logger
 }
 

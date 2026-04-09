@@ -28,6 +28,9 @@ import (
 	{{- if eq . "nats"}}
 	nats "{{$.ProjectName}}/repositories/nats"
 	{{- end}}
+	{{- if eq . "asynq"}}
+	asynq "{{$.ProjectName}}/repositories/asynq"
+	{{- end}}
 	{{- if eq . "minio"}}
 	minio "{{$.ProjectName}}/repositories/minio"
 	{{- end}}
@@ -38,6 +41,16 @@ import (
 	rediscluster "{{$.ProjectName}}/repositories/redis_cluster"
 	{{- end}}
 	{{- end}}
+	{{- end}}
+
+	{{- if has .Modules "nats-consumer"}}
+	"{{.ProjectName}}/consumers"
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	"{{.ProjectName}}/consumers"
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	"{{.ProjectName}}/consumers"
 	{{- end}}
 
 	{{- if .Hosts}}
@@ -76,40 +89,57 @@ type App struct {
 	{{- end}}
 	{{- end}}
 	{{- end}}
+	{{- if has .Modules "nats-consumer"}}
+	NatsConsumer     consumers.Consumer
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	KafkaConsumer    consumers.Consumer
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	AsynqConsumer    consumers.Consumer
+	{{- end}}
 }
 
 // InitializeApp wires all dependencies and returns a ready-to-use App.
 func InitializeApp() *App {
 	configs.LoadConfig()
 	logger := helpers.InitializeZeroLogs()
+	startupID := helpers.GenerateTransactionID()
+	startupCtx := context.WithValue(context.Background(), constants.TRANSACTION_ID, startupID)
 
 	{{- if .Modules}}
 	// --- Repositories ---
 	{{- if has .Modules "nats"}}
-	nc, js := nats.ConnectNats(logger)
+	nc, js := nats.ConnectNats(startupCtx, logger)
+	{{- end}}
+	{{- if has .Modules "asynq"}}
+	ac, as := asynq.ConnectAsynq(startupCtx, logger)
 	{{- end}}
 	repo := repositories.InitializeRepository(
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}
-		mysql.InitializeMysqlRepository(mysql.ConnectMysql(logger), logger),
+		mysql.InitializeMysqlRepository(mysql.ConnectMysql(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "postgresql"}}
-		postgre.InitializePostgreRepository(postgre.ConnectPostgre(logger), logger),
+		postgre.InitializePostgreRepository(postgre.ConnectPostgre(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "redis"}}
-		redis.InitializeRedisRepository(redis.ConnectRedis(logger), logger),
+		redis.InitializeRedisRepository(redis.ConnectRedis(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "kafka"}}
-		kafka.InitializeKafkaRepository(kafka.ConnectKafkaReader(logger), kafka.ConnectKafkaWriter(logger), logger),
+		kafka.InitializeKafkaRepository(kafka.ConnectKafkaReader(startupCtx, logger), kafka.ConnectKafkaWriter(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "nats"}}
 		nats.InitializeNatsRepository(nc, js, logger),
 		{{- end}}
+		{{- if eq . "asynq"}}
+		asynq.InitializeAsynqRepository(ac, as, logger),
+		{{- end}}
 		{{- if eq . "minio"}}
-		minio.InitializeMinioRepository(minio.ConnectMinio(logger), logger),
+		minio.InitializeMinioRepository(minio.ConnectMinio(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "redis-cluster"}}
-		rediscluster.InitializeRedisClusterRepository(rediscluster.ConnectRedisCluster(logger), logger),
+		rediscluster.InitializeRedisClusterRepository(rediscluster.ConnectRedisCluster(startupCtx, logger), logger),
 		{{- end}}
 		{{- end}}
 		logger,
@@ -150,6 +180,19 @@ func InitializeApp() *App {
 	)
 	// [APP_USECASE_INIT_MARKER]
 
+	{{- if or (has .Modules "nats-consumer") (has .Modules "kafka-consumer") (has .Modules "asynq-consumer")}}
+	var consumer consumers.Consumer
+	{{- if has .Modules "nats-consumer"}}
+	consumer = consumers.NewConsumer(logger, v1Usecase)
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	consumer = consumers.NewConsumer(logger, v1Usecase)
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	consumer = consumers.NewConsumer(logger, v1Usecase)
+	{{- end}}
+	{{- end}}
+
 	// --- Controllers ---
 	v := v1Controllers.CustomValidator()
 	{{- range .Features}}
@@ -178,6 +221,15 @@ func InitializeApp() *App {
 		{{- end}}
 		V1Usecase:  v1Usecase,
 		V1Ctrl:     v1Ctrl,
+		{{- if has .Modules "nats-consumer"}}
+		NatsConsumer:   consumer,
+		{{- end}}
+		{{- if has .Modules "kafka-consumer"}}
+		KafkaConsumer:   consumer,
+		{{- end}}
+		{{- if has .Modules "asynq-consumer"}}
+		AsynqConsumer:   consumer,
+		{{- end}}
 	}
 
 	{{- if has .ProjectTypes "Scheduler"}}

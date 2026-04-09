@@ -9,8 +9,16 @@ import (
 
 	"{{.ProjectName}}/configs"
 	"{{.ProjectName}}/internal/app"
+	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	"{{.ProjectName}}/routers"
-	{{- if and (has .ProjectTypes "Worker") (has .Modules "nats")}}
+	{{- end}}
+	{{- if has .Modules "nats-consumer"}}
+	"{{.ProjectName}}/consumers"
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	"{{.ProjectName}}/consumers"
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
 	"{{.ProjectName}}/consumers"
 	{{- end}}
 )
@@ -36,7 +44,13 @@ func main() {
 	ctx := context.Background()
 	logger.Info().Ctx(ctx).Msg("Finish Initializing")
 
-	{{- if and (has .ProjectTypes "Worker") (has .Modules "nats")}}
+	{{- if has .Modules "nats-consumer"}}
+	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
 	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
 	{{- end}}
 
@@ -51,11 +65,13 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	logger.Info().Ctx(ctx).Msg("Shutting down server...")
+	logger.Info().Ctx(ctx).Msg("Shutting down...")
 
+	{{- if or (has .ProjectTypes "Backend") (has .ProjectTypes "Publisher")}}
 	if err := fiberApp.Shutdown(); err != nil {
 		logger.Error().Ctx(ctx).Err(err).Msg("Server forced to shutdown")
 	}
+	{{- end}}
 
 	{{- if has .ProjectTypes "gRPC"}}
 	{{- range .Modules}}

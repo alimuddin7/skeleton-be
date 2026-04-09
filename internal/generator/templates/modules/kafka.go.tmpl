@@ -26,7 +26,7 @@ func InitializeKafkaRepository(consumer *kafka.Consumer, producer *kafka.Produce
 	}
 }
 
-func ConnectKafkaReader(log zerolog.Logger) *kafka.Consumer {
+func ConnectKafkaReader(ctx context.Context, log zerolog.Logger) *kafka.Consumer {
 	conf := configs.Cfg.Database.Kafka
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": conf.Address,
@@ -34,23 +34,23 @@ func ConnectKafkaReader(log zerolog.Logger) *kafka.Consumer {
 		"auto.offset.reset": "earliest",
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Error creating kafka consumer")
+		log.Error().Ctx(ctx).Err(err).Msg("Error creating kafka consumer")
 		panic(err)
 	}
-	log.Info().Msg("Kafka reader connected successfully")
+	log.Info().Ctx(ctx).Msg("Kafka reader connected successfully")
 	return c
 }
 
-func ConnectKafkaWriter(log zerolog.Logger) *kafka.Producer {
+func ConnectKafkaWriter(ctx context.Context, log zerolog.Logger) *kafka.Producer {
 	conf := configs.Cfg.Database.Kafka
 	p, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": conf.Address,
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Error creating kafka producer")
+		log.Error().Ctx(ctx).Err(err).Msg("Error creating kafka producer")
 		panic(err)
 	}
-	log.Info().Msg("Kafka writer connected successfully")
+	log.Info().Ctx(ctx).Msg("Kafka writer connected successfully")
 	return p
 }
 

@@ -27,7 +27,7 @@ func InitializeRedisRepository(conn *redis.Client, log zerolog.Logger) RedisRepo
 	}
 }
 
-func ConnectRedis(log zerolog.Logger) *redis.Client {
+func ConnectRedis(ctx context.Context, log zerolog.Logger) *redis.Client {
 	conf := configs.Cfg.Database.Redis
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", conf.Address, conf.Port),
@@ -35,12 +35,12 @@ func ConnectRedis(log zerolog.Logger) *redis.Client {
 		DB:       conf.DBType,
 	})
 
-	if _, err := client.Ping(context.Background()).Result(); err != nil {
-		log.Error().Err(err).Msg("Error open redis connection")
+	if _, err := client.Ping(ctx).Result(); err != nil {
+		log.Error().Ctx(ctx).Err(err).Msg("Error open redis connection")
 		panic("Error open redis connection")
 	}
 
-	log.Info().Msg("Redis connected successfully")
+	log.Info().Ctx(ctx).Msg("Redis connected successfully")
 	return client
 }
 

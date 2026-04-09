@@ -1,11 +1,13 @@
 package helpers
 
 import (
+	"context"
+	"{{.ProjectName}}/constants"
 	"time"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-	"{{.ProjectName}}/constants"
 )
 
 func TracingMiddleware() fiber.Handler {
@@ -14,7 +16,15 @@ func TracingMiddleware() fiber.Handler {
 		if traceID == "" {
 			traceID = uuid.New().String()
 		}
+		
+		// 1. Store in Locals for Fiber-specific logic (e.g. LoggingMiddleware)
 		c.Locals(constants.TRANSACTION_ID, traceID)
+		
+		// 2. Inject into UserContext for standard context.Context propagation
+		// This is what zerolog.Ctx(ctx) will look for via the TraceIDHook
+		ctx := context.WithValue(c.UserContext(), constants.TRANSACTION_ID, traceID)
+		c.SetUserContext(ctx)
+		
 		c.Set("X-Trace-Id", traceID)
 		return c.Next()
 	}
@@ -23,18 +33,31 @@ func TracingMiddleware() fiber.Handler {
 func LoggingMiddleware(log zerolog.Logger) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		start := time.Now()
+
+		// Capture request headers safely
+		reqHeader := c.GetHeaders()
+
+		// Execute next handlers
 		err := c.Next()
-		
+
+		// Extract traceID from locals (safely)
 		traceID, _ := c.Locals(constants.TRANSACTION_ID).(string)
-		
+
+		// Capture response headers and body
+		respHeader := c.GetRespHeaders()
+		respBody := c.Response().Body()
+
 		log.Info().
-			Str("trace_id", traceID).
+			Str("traceID", traceID).
 			Str("method", c.Method()).
 			Str("path", c.Path()).
+			Any("requestHeader", reqHeader).
+			Any("responseHeader", respHeader).
+			RawJSON("responseBody", respBody).
 			Int("status", c.Response().StatusCode()).
 			Dur("duration", time.Since(start)).
 			Msg("API Request")
-			
+
 		return err
 	}
 }

@@ -11,8 +11,21 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize a new project",
-	Long:  "Interactively generate a new production-ready Go microservice boilerplate.",
+	Short: "Initialize a new microservice project",
+	Long: `Initialize a new production-ready Go microservice boilerplate through an interactive 9-step wizard.
+
+Available Project Types:
+- Backend: REST API using Fiber v3
+- Scheduler: Background cron jobs using robfig/cron
+- Worker: Message consumer for NATS/Kafka/Asynq
+- Publisher: Message producer for NATS/Kafka/Asynq
+- gRPC: High-performance RPC (Server/Client)
+
+Available Infrastructure Modules:
+- Databases: MySQL, PostgreSQL
+- Caching: Redis Standalone, Redis Cluster
+- Messaging: NATS JetStream, Kafka, Asynq (Redis-based)
+- Storage: MinIO`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fName, _ := cmd.Flags().GetString("name")
 		fCode, _ := cmd.Flags().GetString("code")
@@ -27,6 +40,10 @@ var initCmd = &cobra.Command{
 		if serviceCode == "" {
 			serviceCode = "01"
 		}
+		projectTypes := make([]string, 0)
+		messagingModules := make([]string, 0)
+		messagingRole := "Consumer"
+
 		projectType := fType
 		if projectType == "" {
 			projectType = "Backend"
@@ -40,7 +57,6 @@ var initCmd = &cobra.Command{
 		}
 
 		modules, _ := cmd.Flags().GetStringSlice("modules")
-		asynq := "No"
 		grpc := "No"
 		hostInput, _ := cmd.Flags().GetString("hosts")
 
@@ -66,14 +82,23 @@ var initCmd = &cobra.Command{
 			))
 		}
 
-		// Step 3: Project Type
+		// Step 3: Project Type (multi-select)
 		if fType == "" {
 			groups = append(groups, huh.NewGroup(
-				huh.NewSelect[string]().
+				huh.NewMultiSelect[string]().
 					Title("Project Type").
-					Options(huh.NewOptions("Backend", "Scheduler", "Worker", "Publisher", "gRPC")...).
-					Value(&projectType),
+					Description("Space to toggle, Enter to confirm. Select all that apply.").
+					Options(
+						huh.NewOption("Backend (REST API)", "Backend"),
+						huh.NewOption("Scheduler (Cron Jobs)", "Scheduler"),
+						huh.NewOption("Worker (Message Consumer)", "Worker"),
+						huh.NewOption("Publisher (Message Producer)", "Publisher"),
+						huh.NewOption("gRPC", "gRPC"),
+					).
+					Value(&projectTypes),
 			))
+		} else {
+			projectTypes = []string{projectType}
 		}
 
 		// Step 4: Primary Database
@@ -86,24 +111,44 @@ var initCmd = &cobra.Command{
 			))
 		}
 
-		// Step 5: Additional Modules
+		// Step 5: Additional Infrastructure Modules
 		if !cmd.Flags().Changed("modules") {
 			groups = append(groups, huh.NewGroup(
 				huh.NewMultiSelect[string]().
-					Title("Additional Modules").
+					Title("Additional Infrastructure Modules").
 					Description("Space to toggle, Enter to confirm. No selection = skip").
 					Options(
 						huh.NewOption("Redis Standalone", "redis"),
 						huh.NewOption("Redis Cluster", "redis-cluster"),
-						huh.NewOption("Kafka", "kafka"),
-						huh.NewOption("NATS", "nats"),
 						huh.NewOption("MinIO", "minio"),
 					).
 					Value(&modules),
 			))
 		}
 
-		// Step 6: External Hosts / API integration
+		// Step 6: Messaging Modules (NATS / Kafka / Asynq)
+		groups = append(groups, huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("Messaging / Queue Modules").
+				Description("Select messaging brokers to integrate (Worker & Publisher roles will be set next)").
+				Options(
+					huh.NewOption("NATS JetStream", "nats"),
+					huh.NewOption("Kafka", "kafka"),
+					huh.NewOption("Asynq (Redis-based)", "asynq"),
+				).
+				Value(&messagingModules),
+		))
+
+		// Step 7: Role for messaging — always shown, ignored if no broker selected
+		groups = append(groups, huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Messaging Role").
+				Description("How will this service use the messaging modules? (Ignored if no broker selected above)").
+				Options(huh.NewOptions("Consumer", "Publisher", "Both")...).
+				Value(&messagingRole),
+		))
+
+		// Step 8: External Hosts / API integration
 		if !cmd.Flags().Changed("hosts") {
 			groups = append(groups, huh.NewGroup(
 				huh.NewInput().
@@ -113,21 +158,7 @@ var initCmd = &cobra.Command{
 			))
 		}
 
-		// Step 7: Asynq
-		fAsynq, _ := cmd.Flags().GetString("asynq")
-		if fAsynq != "" {
-			asynq = fAsynq
-		} else {
-			groups = append(groups, huh.NewGroup(
-				huh.NewSelect[string]().
-					Title("Asynq (Background Queue)").
-					Description("Redis-based async job queue").
-					Options(huh.NewOptions("No", "Publisher", "Consumer", "Both")...).
-					Value(&asynq),
-			))
-		}
-
-		// Step 8: gRPC
+		// Step 9: gRPC
 		fGrpc, _ := cmd.Flags().GetString("grpc")
 		if fGrpc != "" {
 			grpc = fGrpc
@@ -159,10 +190,23 @@ var initCmd = &cobra.Command{
 			}
 		}
 
+		// If fType was provided via flag (not interactive), use it as-is
+		if fType != "" {
+			projectTypes = []string{fType}
+		}
+
+		// [DEBUG] Log selections
+		fmt.Printf("\n--- Debug Selections ---\n")
+		fmt.Printf("ProjectTypes: %v\n", projectTypes)
+		fmt.Printf("Modules (Infrastructure): %v\n", modules)
+		fmt.Printf("MessagingModules: %v\n", messagingModules)
+		fmt.Printf("MessagingRole: %s\n", messagingRole)
+		fmt.Printf("------------------------\n")
+
 		config := generator.Config{
 			ProjectName:  strings.TrimSpace(projectName),
 			ServiceCode:  strings.TrimSpace(serviceCode),
-			ProjectTypes: []string{projectType},
+			ProjectTypes: projectTypes,
 			Database:     primaryDb,
 			Modules:      modules,
 			Hosts:        cleanHosts,
@@ -172,26 +216,31 @@ var initCmd = &cobra.Command{
 			return fmt.Errorf("project name cannot be empty")
 		}
 
-		// Add DB to modules
+		// Add primary DB to modules
 		if config.Database != "" {
 			config.Modules = append(config.Modules, config.Database)
 		}
+
 		// Scheduler module
 		for _, pt := range config.ProjectTypes {
 			if pt == "Scheduler" {
 				config.Modules = append(config.Modules, "scheduler")
 			}
 		}
-		// Asynq modules
-		if asynq != "No" {
-			config.Modules = append(config.Modules, "redis-asynq")
-			if asynq == "Publisher" || asynq == "Both" {
-				config.Modules = append(config.Modules, "asynq-publisher")
+
+		// Add messaging modules based on selected brokers + role
+		for _, broker := range messagingModules {
+			// Always add the base infra module
+			config.Modules = append(config.Modules, broker)
+			// Add role-specific module strings
+			if messagingRole == "Consumer" || messagingRole == "Both" {
+				config.Modules = append(config.Modules, broker+"-consumer")
 			}
-			if asynq == "Consumer" || asynq == "Both" {
-				config.Modules = append(config.Modules, "asynq-consumer")
+			if messagingRole == "Publisher" || messagingRole == "Both" {
+				config.Modules = append(config.Modules, broker+"-publisher")
 			}
 		}
+
 		// gRPC modules
 		switch grpc {
 		case "Server":
@@ -220,6 +269,5 @@ func init() {
 	initCmd.Flags().StringP("type", "t", "", "Project type (Backend, Scheduler, Worker, Publisher, gRPC)")
 	initCmd.Flags().StringSliceP("modules", "m", []string{}, "Additional modules (redis, kafka, nats, minio)")
 	initCmd.Flags().StringP("hosts", "H", "", "External API hosts (comma separated)")
-	initCmd.Flags().StringP("asynq", "a", "", "Asynq mode (No, Publisher, Consumer, Both)")
 	initCmd.Flags().StringP("grpc", "g", "", "gRPC mode (No, Server, Client, Both)")
 }

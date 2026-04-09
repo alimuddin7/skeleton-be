@@ -24,6 +24,9 @@ import (
 	{{- if eq . "redis-cluster"}}
 	rediscluster "{{$.ProjectName}}/repositories/redis_cluster"
 	{{- end}}
+	{{- if eq . "asynq"}}
+	"{{$.ProjectName}}/repositories/asynq"
+	{{- end}}
 	{{- end}}
 )
 
@@ -43,6 +46,8 @@ type Repository interface {
 	GetMinio() minio.MinioRepository
 	{{- else if eq . "redis-cluster"}}
 	GetRedisCluster() rediscluster.RedisClusterRepository
+	{{- else if eq . "asynq"}}
+	GetAsynq() asynq.AsynqRepository
 	{{- end}}
 	{{- end}}
 }
@@ -70,6 +75,9 @@ type repository struct {
 	{{- if eq . "redis-cluster"}}
 	RedisCluster rediscluster.RedisClusterRepository
 	{{- end}}
+	{{- if eq . "asynq"}}
+	Asynq asynq.AsynqRepository
+	{{- end}}
 	{{- end}}
 }
 
@@ -96,6 +104,9 @@ func InitializeRepository(
 	{{- if eq . "redis-cluster"}}
 	redisClusterDb rediscluster.RedisClusterRepository,
 	{{- end}}
+	{{- if eq . "asynq"}}
+	asynqDb asynq.AsynqRepository,
+	{{- end}}
 	{{- end}}
 	l zerolog.Logger,
 ) Repository {
@@ -121,6 +132,9 @@ func InitializeRepository(
 		{{- end}}
 		{{- if eq . "redis-cluster"}}
 		RedisCluster: redisClusterDb,
+		{{- end}}
+		{{- if eq . "asynq"}}
+		Asynq: asynqDb,
 		{{- end}}
 		{{- end}}
 	}
@@ -160,6 +174,11 @@ func (d *repository) GetMinio() minio.MinioRepository {
 {{- if eq . "redis-cluster"}}
 func (d *repository) GetRedisCluster() rediscluster.RedisClusterRepository {
 	return d.RedisCluster
+}
+{{- end}}
+{{- if eq . "asynq"}}
+func (d *repository) GetAsynq() asynq.AsynqRepository {
+	return d.Asynq
 }
 {{- end}}
 {{- end}}

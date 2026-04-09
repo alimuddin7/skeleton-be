@@ -34,7 +34,7 @@ func InitializeMysqlRepository(conn *gorm.DB, log zerolog.Logger) MysqlRepositor
 	}
 }
 
-func ConnectMysql(log zerolog.Logger) *gorm.DB {
+func ConnectMysql(ctx context.Context, log zerolog.Logger) *gorm.DB {
 	conf := configs.Cfg.Database.MySQL
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		conf.User, conf.Pass, conf.Host, conf.Port, conf.Database)
@@ -47,7 +47,7 @@ func ConnectMysql(log zerolog.Logger) *gorm.DB {
 		}),
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Error open mysql connection")
+		log.Error().Ctx(ctx).Err(err).Msg("Error open mysql connection")
 		panic("failed to connect database")
 	}
 	return db

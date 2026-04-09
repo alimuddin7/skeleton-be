@@ -34,7 +34,7 @@ func InitializePostgreRepository(conn *gorm.DB, log zerolog.Logger) PostgreRepos
 	}
 }
 
-func ConnectPostgre(log zerolog.Logger) *gorm.DB {
+func ConnectPostgre(ctx context.Context, log zerolog.Logger) *gorm.DB {
 	conf := configs.Cfg.Database.PostgreSQL
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=Asia/Jakarta",
 		conf.Host, conf.User, conf.Pass, conf.Database, conf.Port, conf.SSLMode)
@@ -47,7 +47,7 @@ func ConnectPostgre(log zerolog.Logger) *gorm.DB {
 		}),
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Error open postgres connection")
+		log.Error().Ctx(ctx).Err(err).Msg("Error open postgres connection")
 		panic("Error open postgres connection")
 	}
 	return db

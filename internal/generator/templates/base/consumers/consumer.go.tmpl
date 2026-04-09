@@ -1,0 +1,111 @@
+package consumers
+
+import (
+	"context"
+	"{{.ProjectName}}/constants"
+	v1Usecases "{{.ProjectName}}/usecases/v1"
+
+	{{- if has .Modules "nats-consumer"}}
+	natsgo "github.com/nats-io/nats.go/jetstream"
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	"github.com/hibiken/asynq"
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+	{{- end}}
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+)
+
+type consumer struct {
+	logs    zerolog.Logger
+	usecase v1Usecases.Usecase
+}
+
+type Consumer interface {
+	{{- if has .Modules "nats-consumer"}}
+	ConsumeNats(msg natsgo.Msg)
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	ConsumeKafka(msg *kafka.Message) error
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	ProcessTask(ctx context.Context, t *asynq.Task) error
+	{{- end}}
+}
+
+func NewConsumer(logs zerolog.Logger, usecase v1Usecases.Usecase) Consumer {
+	return &consumer{
+		logs:    logs,
+		usecase: usecase,
+	}
+}
+
+{{- if has .Modules "nats-consumer"}}
+
+func (c *consumer) ConsumeNats(msg natsgo.Msg) {
+	traceID := msg.Headers().Get("X-Trace-ID")
+	if traceID == "" {
+		traceID = uuid.New().String()
+	}
+
+	ctx := context.WithValue(context.Background(), constants.TRANSACTION_ID, traceID)
+	c.logs.Info().Ctx(ctx).Msgf("[NATS] Received: %v | %s", msg.Headers(), string(msg.Data()))
+
+	if err := msg.Ack(); err != nil {
+		c.logs.Error().Ctx(ctx).Err(err).Msg("[NATS] Failed to ack message")
+	}
+}
+{{- end}}
+
+{{- if has .Modules "kafka-consumer"}}
+
+func (c *consumer) ConsumeKafka(msg *kafka.Message) error {
+	var traceID string
+	for _, header := range msg.Headers {
+		if header.Key == "X-Trace-ID" {
+			traceID = string(header.Value)
+			break
+		}
+	}
+	if traceID == "" {
+		traceID = uuid.New().String()
+	}
+
+	ctx := context.WithValue(context.Background(), constants.TRANSACTION_ID, traceID)
+	c.logs.Info().Ctx(ctx).Msgf("[Kafka] Received: %s", string(msg.Value))
+	
+	// TODO: implement Kafka message processing
+	return nil
+}
+{{- end}}
+
+{{- if has .Modules "asynq-consumer"}}
+
+func (c *consumer) ProcessTask(ctx context.Context, t *asynq.Task) error {
+	// For Asynq, check if trace_id is in metadata or payload. 
+	// As a simple convention, we check for a custom header/metadata if supported, 
+	// or generate a new one if not present.
+	traceID := uuid.New().String() 
+	
+	// If you pass trace_id in payload, extract it here.
+	// Example: 
+	// var p MyPayload 
+	// json.Unmarshal(t.Payload(), &p)
+	// if p.TraceID != "" { traceID = p.TraceID }
+
+	ctx = context.WithValue(ctx, constants.TRANSACTION_ID, traceID)
+	c.logs.Info().Ctx(ctx).Str("type", t.Type()).Msg("[Asynq] Processing task")
+
+	switch t.Type() {
+	case "example:task":
+		// TODO: call usecase method
+		// return c.usecase.HandleExampleTask(ctx, t.Payload())
+		return nil
+	default:
+		c.logs.Warn().Ctx(ctx).Str("type", t.Type()).Msg("[Asynq] Unknown task type")
+		return nil // Or return error to retry
+	}
+}
+{{- end}}

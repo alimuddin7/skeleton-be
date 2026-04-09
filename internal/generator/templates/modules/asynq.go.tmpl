@@ -1,0 +1,79 @@
+package asynq
+
+import (
+	"context"
+	"time"
+
+	"{{.ProjectName}}/configs"
+	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog"
+)
+
+type AsynqRepository interface {
+	GetClient() *asynq.Client
+	GetServer() *asynq.Server
+	// Publish enqueues a task for immediate processing
+	Publish(ctx context.Context, taskType string, payload []byte, opts ...asynq.Option) (*asynq.TaskInfo, error)
+	// PublishIn enqueues a task to be processed after the specified delay
+	PublishIn(ctx context.Context, taskType string, payload []byte, delay time.Duration, opts ...asynq.Option) (*asynq.TaskInfo, error)
+	// PublishAt enqueues a task to be processed at the specified time
+	PublishAt(ctx context.Context, taskType string, payload []byte, processAt time.Time, opts ...asynq.Option) (*asynq.TaskInfo, error)
+}
+
+type asynqRepository struct {
+	client *asynq.Client
+	server *asynq.Server
+	logs   zerolog.Logger
+}
+
+func ConnectAsynq(l zerolog.Logger) (*asynq.Client, *asynq.Server) {
+	redisConn := asynq.RedisClientOpt{
+		Addr:     configs.Cfg.Database.Asynq.RedisAddr,
+		Password: configs.Cfg.Database.Asynq.RedisPassword,
+		DB:       configs.Cfg.Database.Asynq.DBIndex,
+	}
+
+	client := asynq.NewClient(redisConn)
+	server := asynq.NewServer(redisConn, asynq.Config{
+		Concurrency: configs.Cfg.Database.Asynq.Concurrency,
+	})
+
+	return client, server
+}
+
+func InitializeAsynqRepository(client *asynq.Client, server *asynq.Server, l zerolog.Logger) AsynqRepository {
+	return &asynqRepository{
+		client: client,
+		server: server,
+		logs:   l,
+	}
+}
+
+func (r *asynqRepository) GetClient() *asynq.Client {
+	return r.client
+}
+
+func (r *asynqRepository) GetServer() *asynq.Server {
+	return r.server
+}
+
+func (r *asynqRepository) Publish(ctx context.Context, taskType string, payload []byte, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	task := asynq.NewTask(taskType, payload)
+	info, err := r.client.Enqueue(task, opts...)
+	if err != nil {
+		r.logs.Error().Ctx(ctx).Err(err).Str("type", taskType).Msg("Failed to enqueue asynq task")
+		return nil, err
+	}
+	r.logs.Info().Ctx(ctx).Str("type", taskType).Str("id", info.ID).Msg("Asynq task enqueued")
+	return info, nil
+}
+
+func (r *asynqRepository) PublishIn(ctx context.Context, taskType string, payload []byte, delay time.Duration, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	opts = append(opts, asynq.ProcessIn(delay))
+	return r.Publish(ctx, taskType, payload, opts...)
+}
+
+func (r *asynqRepository) PublishAt(ctx context.Context, taskType string, payload []byte, processAt time.Time, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	opts = append(opts, asynq.ProcessAt(processAt))
+	return r.Publish(ctx, taskType, payload, opts...)
+}

@@ -274,9 +274,10 @@ func RemoveCRUD(name string) error {
 
 	// Determine file paths
 	repoPath := fmt.Sprintf("repositories/%s.go", lowerName)
-	if dbType == "postgresql" {
+	switch dbType {
+	case "postgresql":
 		repoPath = fmt.Sprintf("repositories/postgre/%s.go", lowerName)
-	} else if dbType == "mysql" {
+	case "mysql":
 		repoPath = fmt.Sprintf("repositories/mysql/%s.go", lowerName)
 	}
 
@@ -331,9 +332,10 @@ func %s() {
 
 func renderDomainComponents(cfg featureConfig) error {
 	repoPath := fmt.Sprintf("repositories/%s.go", cfg.FeatureNameLower)
-	if cfg.DBType == "postgresql" {
+	switch cfg.DBType {
+	case "postgresql":
 		repoPath = fmt.Sprintf("repositories/postgre/%s.go", cfg.FeatureNameLower)
-	} else if cfg.DBType == "mysql" {
+	case "mysql":
 		repoPath = fmt.Sprintf("repositories/mysql/%s.go", cfg.FeatureNameLower)
 	}
 
@@ -362,13 +364,36 @@ func renderDomainComponents(cfg featureConfig) error {
 
 // Internal helpers
 
+func hasConsumerModule(cfg Config) bool {
+	for _, m := range cfg.Modules {
+		if strings.HasSuffix(m, "-consumer") {
+			return true
+		}
+	}
+	return false
+}
+
+// func hasPublisherModule(cfg Config) bool {
+// 	for _, m := range cfg.Modules {
+// 		if strings.HasSuffix(m, "-publisher") {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
 func createDirectoryStructure(destDir string, cfg Config) error {
 	// Base directories (always created)
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
 		"routers", "models", "models/dto", "errorcodes", "docker", "migrations", "helpers", "helpers/models",
-		"internal/app", "consumers",
+		"internal/app",
 		".gitlab", ".gitlab/ci", ".gitlab/script",
+	}
+
+	// Only create consumers dir if there is at least one *-consumer module
+	if hasConsumerModule(cfg) {
+		baseDirs = append(baseDirs, "consumers")
 	}
 
 	for _, dir := range baseDirs {
@@ -387,6 +412,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 		"redis":         "repositories/redis",
 		"kafka":         "repositories/kafka",
 		"nats":          "repositories/nats",
+		"asynq":         "repositories/asynq",
 		"minio":         "repositories/minio",
 		"redis-cluster": "repositories/redis_cluster",
 		"grpc-server":   "grpc/server",
@@ -514,7 +540,7 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 	// Add databases.go.tmpl only if there are database modules
 	hasDatabase := false
 	for _, mod := range cfg.Modules {
-		if mod == "mysql" || mod == "postgresql" || mod == "redis" || mod == "kafka" || mod == "nats" || mod == "minio" || mod == "redis-cluster" {
+		if mod == "mysql" || mod == "postgresql" || mod == "redis" || mod == "kafka" || mod == "nats" || mod == "asynq" || mod == "minio" || mod == "redis-cluster" {
 			hasDatabase = true
 			break
 		}
@@ -533,13 +559,14 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 		templates["templates/base/hosts/hosts.go.tmpl"] = "hosts/hosts.go"
 	}
 
-	// Add module-specific templates
+	// Add module-specific repository templates (base infra modules only)
 	mapping := map[string]string{
 		"mysql":         "repositories/mysql/mysql.go",
 		"postgresql":    "repositories/postgre/postgre.go",
 		"redis":         "repositories/redis/redis.go",
 		"kafka":         "repositories/kafka/kafka.go",
 		"nats":          "repositories/nats/nats.go",
+		"asynq":         "repositories/asynq/asynq.go",
 		"minio":         "repositories/minio/minio.go",
 		"redis-cluster": "repositories/redis_cluster/redis_cluster.go",
 		"grpc-server":   "grpc/server/server.go",
@@ -563,9 +590,10 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 		}
 	}
 
-	// Add consumers if project type is Worker and NATS is present
-	if isProjectTypePresent(cfg, "Worker") && isModulePresent(&cfg, "nats") {
+	// Add consumer templates if any *-consumer module is present
+	if hasConsumerModule(cfg) {
 		templates["templates/base/consumers/main.go.tmpl"] = "consumers/main.go"
+		templates["templates/base/consumers/consumer.go.tmpl"] = "consumers/consumer.go"
 	}
 }
 
@@ -580,9 +608,10 @@ type featureConfig struct {
 
 func createFeatureConfig(cfg *Config, name string, isCRUD bool, dbType string) featureConfig {
 	repoPkg := "repositories"
-	if dbType == "postgresql" {
+	switch dbType {
+	case "postgresql":
 		repoPkg = "postgre"
-	} else if dbType == "mysql" {
+	case "mysql":
 		repoPkg = "mysql"
 	}
 	return featureConfig{

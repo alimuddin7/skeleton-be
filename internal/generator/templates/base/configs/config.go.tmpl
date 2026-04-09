@@ -42,9 +42,12 @@ type Config struct {
 			Servers         []string `envconfig:"NATS_SERVERS"`
 			Username        string   `envconfig:"NATS_USERNAME"`
 			Password        string   `envconfig:"NATS_PASSWORD"`
-			ExampleStream   string   `envconfig:"NATS_EXAMPLE_STREAM"`
-			ExampleSubject string   `envconfig:"NATS_EXAMPLE_SUBJECT"`
+			ExampleStream   string   `envconfig:"NATS_EXAMPLE_STREAM" default:"EXAMPLE_STREAM"`
+			ExampleConsumer string   `envconfig:"NATS_EXAMPLE_CONSUMER" default:"EXAMPLE_CONSUMER"`
 		}
+		{{- end}}
+		{{- if eq . "asynq"}}
+		Asynq      struct { RedisAddr string `envconfig:"ASYNQ_REDIS_ADDR" default:"localhost:6379"`; RedisPassword string `envconfig:"ASYNQ_REDIS_PASSWORD"`; DBIndex int `envconfig:"ASYNQ_REDIS_DB" default:"0"`; Concurrency int `envconfig:"ASYNQ_CONCURRENCY" default:"10"` }
 		{{- end}}
 		{{- if eq . "minio"}}
 		Minio      struct { Endpoint string `envconfig:"MINIO_ENDPOINT"`; KeyID string `envconfig:"MINIO_KEY_ID"`; Secret string `envconfig:"MINIO_SECRET"` }

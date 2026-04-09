@@ -3,106 +3,112 @@
 [![Release](https://img.shields.io/github/v/tag/alimuddin7/skeleton-be?label=release)](https://github.com/alimuddin7/skeleton-be/tags)
 [![License](https://img.shields.io/github/license/alimuddin7/skeleton-be)](LICENSE)
 
-**Skeleton-BE** is a modern, interactive CLI boilerplate generator for Go microservices. Built on top of **Fiber v3**, **GORM v2**, and **Zerolog**, it follows Clean Architecture principles to help you scaffold production-ready services in seconds.
+**Skeleton-BE** is a production-grade, interactive CLI boilerplate generator for Go microservices. Optimized for high-performance and maintainability, it scaffolds projects based on **Fiber v3**, **GORM v2**, and **Zerolog**, strictly adhering to **Clean Architecture** principles.
 
 ---
 
 ## ✨ Key Features
 
-- 🛠 **Interactive CLI**: Smooth wizard experience powered by [Huh](https://github.com/charmbracelet/huh) and [Fang](https://github.com/charmbracelet/fang).
-- 🏗 **Clean Architecture**: Separated layers for Controllers, Usecases, Repositories, and Models.
-- 🔌 **Plug & Play Modules**: Easily add Redis, Kafka, NATS, MinIO, and more.
-- 📡 **gRPC Support**: Built-in templates for gRPC Server and Client.
-- 🏢 **Multi-Host Integration**: Ready-to-go templates for integrating with external API hosts.
-- 🐳 **Docker Ready**: Pre-configured Dockerfile and Docker Compose for Dev, Staging, and Prod.
-- 🚀 **GitLab CI/CD**: Complete CI/CD pipelines including SonarQube scanning.
+- 🛠 **Interactive CLI**: Seamless onboarding experience using [Huh](https://github.com/charmbracelet/huh).
+- 🏗 **Clean Architecture**: Standardized layers (Controller, Usecase, Repository, Model) ensuring clear separation of concerns.
+- 🔌 **Plug & Play Infrastructure**: Instant integration for popular databases, caches, and message brokers.
+- 📡 **gRPC Ready**: Built-in support for both gRPC Servers and Clients with automated proto management.
+- 🏢 **Multi-Host Integration**: Scaffold robust clients for external service integrations.
+- 🧪 **Observability**: Centralized logging with Zerolog, including automatic TraceID propagation across background workers.
+- 🐳 **Containerization**: Multi-stage Dockerfiles and environment-specific Docker Compose configurations.
+- 🚀 **DevOps Friendly**: Pre-configured GitLab CI/CD pipelines and SonarQube support.
 
 ---
 
 ## 🚀 Installation
 
-Install the CLI globally using Go:
+Install the CLI globally:
 
 ```bash
 go install github.com/alimuddin7/skeleton-be@latest
 ```
 
 > [!TIP]
-> Make sure your `$GOPATH/bin` is in your system's `PATH` to run `skeleton-be` from anywhere.
+> Ensure your `$GOPATH/bin` is added to your system's `PATH`.
 
 ---
 
-## 🛠 Usage
+## 🛠 Usage Guide
 
-### 1. Initialize a New Project
-Start the 8-step interactive wizard to scaffold your service:
+### 1. Project Initialization
+Scaffold a complete microservice in seconds via an interactive 9-step wizard:
 
 ```bash
 skeleton-be init
 ```
 
-The wizard will guide you through:
-1. **Project Name** - e.g., `payment-service`
-2. **Service Code** - e.g., `OF01`, `OAG02`
-3. **Project Type** - Backend, Scheduler, Worker, etc.
-4. **Primary Database** - MySQL or PostgreSQL
-5. **Additional Modules** - Select Redis, Kafka, etc.
-6. **External API Hosts** - Input host names (comma-separated)
-7. **Asynq** - Redis-based background queues
-8. **gRPC Support** - Server, Client, or Both
+The wizard covers:
+1. **Project Name** & **Service Code** (Identifier)
+2. **Project Type** (Backend, Scheduler, Worker, Publisher, gRPC) - *Multi-select supported*
+3. **Database** (MySQL or PostgreSQL)
+4. **Infra Modules** (Redis, Kafka, NATS, etc.)
+5. **Messaging Roles** (Consumer, Publisher, or Both)
+6. **External Hosts** & **gRPC Mode**
 
-### 2. Add Components to Existing Project
-Keep your project growing with simple commands:
+### 2. Available Infrastructure Modules
+| Module | Description | Supported Roles |
+| :--- | :--- | :--- |
+| **MySQL / Postgre** | SQL Databases with GORM v2 | Primary DB |
+| **Redis** | Standalone or Cluster mode | Cache / Queue |
+| **NATS JetStream** | Cloud-native messaging | Consumer / Publisher |
+| **Kafka** | High-throughput distributed queue | Consumer / Publisher |
+| **Asynq** | Redis-based background processing | Worker / Client |
+| **MinIO** | S3-compatible object storage | Storage |
+
+### 3. Component Generation
+Extend your existing project with specialized components:
 
 ```bash
-# Add a module (e.g., redis)
-skeleton-be add module redis
+# Add new infrastructure
+skeleton-be add module kafka
 
-# Add an external API host integration
-skeleton-be add host payment-core
+# Generate full CRUD for an entity
+skeleton-be add crud user --db postgresql
 
-# Generate full CRUD (Controller, Usecase, Repository, Model, Routes)
-skeleton-be add crud user --db mysql
+# Add a simple route/feature stack
+skeleton-be add route healthcheck
 
-# Add specific helper or route
-skeleton-be add helper jwt
-skeleton-be add route transaction
+# Integrate an external API
+skeleton-be add host payment-gateway
 ```
 
-### 3. Database Migrations
-Generate standardized migration files:
+### 4. Database Migrations
+Create standardized SQL migration files:
 
 ```bash
-skeleton-be migrate create create_users_table
+skeleton-be migrate create add_status_to_users
 ```
 
 ---
 
 ## 📂 Project Structure
 
-Skeleton-BE generates a strict and clean directory structure:
-
 ```text
-├── cmd/                # Entry points
-├── configs/            # Configuration logic (Env/YAML)
-├── constants/          # Application-wide constants
-├── controllers/        # Delivery layer (Fiber handlers)
-├── models/             # Business entities & DTOs (Request/Response)
-├── repositories/       # Data layer (SQL, NoSQL, Cache)
-├── usecases/           # Business logic layer
-├── hosts/              # External API integrations
-├── helpers/            # Cross-cutting utilities (Auth, HTTP, Logger)
-├── routers/            # Route definitions
-├── docker/             # Docker configurations
-└── errorcodes/         # Standardized error definitions
+├── cmd/                # Entry points (main.go)
+├── configs/            # Config parsing (Env/YAML)
+├── constants/          # App constants (TraceID, Error Codes)
+├── controllers/        # Delivery layer (Fiber/gRPC handlers)
+├── models/             # DTOs, Entities, and Validations
+├── repositories/       # Data layer (SQL, Redis, NATS)
+├── usecases/           # Pure Business Logic
+├── hosts/              # External service clients
+├── helpers/            # Shared utilities (Context, Logger, Auth)
+├── routers/            # HTTP Route registrations
+├── docker/             # Multi-stage Docker setups
+└── errorcodes/         # Multilingual error messages (JSON)
 ```
 
 ---
 
 ## 🤝 Contribution
 
-Feel free to open issues or submit pull requests. Let's make Go microservice development faster and cleaner!
+Contributions are welcome! Please feel free to submit Pull Requests or open Issues for feature requests.
 
 ---
 
-*Authored by [ahmadfikrialimudin](https://github.com/alimuddin7)*
+*Developed with ❤️ by [ahmadfikrialimudin](https://github.com/ahmadfikrialimudin)*

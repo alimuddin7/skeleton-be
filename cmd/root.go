@@ -6,16 +6,24 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "skeleton-be",
-	Short: "A dynamic boilerplate generator for Fiber v3 microservices",
-	Long: `skeleton-be is a CLI tool that generates production-ready Go microservices
-using Fiber v3, GORM v2, and Zerolog, based on clean architecture patterns.
+	Short: "Interactive boilerplate generator for Fiber v3 microservices",
+	Long: `Skeleton-BE is a powerful CLI tool designed to scaffold production-ready Go microservices.
+It follows Clean Architecture principles and integrates best-in-class libraries like Fiber v3, GORM v2, and Zerolog.
 
-Examples:
-  skeleton-be init
-  skeleton-be init --name my-service --code 01 --type Backend --db mysql
-  skeleton-be add crud user
-  skeleton-be add route notification
-  skeleton-be add host core-payment`,
+Features:
+- Standardized project structure
+- Plug-and-play infrastructure modules (DBs, Caches, Brokers)
+- Multi-messaging role support (Consumer/Publisher)
+- Automated CRUD and feature generation
+- Docker and GitLab CI/CD integration
+
+Usage Examples:
+  skeleton-be init                         # Launch interactive wizard
+  skeleton-be add module redis             # Add Redis standalone
+  skeleton-be add module nats              # Add NATS with role selection
+  skeleton-be add crud product             # Generate full CRUD for product entity
+  skeleton-be add route health             # Generate a simple healthcheck route
+  skeleton-be add host user-api            # Scaffold an external API client`,
 }
 
 // Root exposes rootCmd so main.go can pass it to fang.Execute.

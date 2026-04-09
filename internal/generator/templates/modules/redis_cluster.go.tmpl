@@ -31,13 +31,12 @@ func InitializeRedisClusterRepository(conn *redis.ClusterClient, log zerolog.Log
 	}
 }
 
-func ConnectRedisCluster(log zerolog.Logger) *redis.ClusterClient {
-	c := context.Background()
+func ConnectRedisCluster(ctx context.Context, log zerolog.Logger) *redis.ClusterClient {
 	client := redis.NewClusterClient(&redis.ClusterOptions{
 		ClusterSlots: func(ctx context.Context) ([]redis.ClusterSlot, error) {
 			conf := configs.Cfg.Database.RedisCluster
 			if len(conf.Address) != len(conf.SlaveAddress) {
-				log.Fatal().Msg("Redis Cluster Address and SlaveAddress length mismatch")
+				log.Fatal().Ctx(ctx).Msg("Redis Cluster Address and SlaveAddress length mismatch")
 			}
 			slots := make([]redis.ClusterSlot, len(conf.Address))
 			start := 0
@@ -58,16 +57,16 @@ func ConnectRedisCluster(log zerolog.Logger) *redis.ClusterClient {
 		RouteRandomly: true,
 	})
 
-	err := client.ForEachShard(c, func(c context.Context, shard *redis.Client) error {
+	err := client.ForEachShard(ctx, func(c context.Context, shard *redis.Client) error {
 		return shard.Ping(c).Err()
 	})
 
 	if err != nil {
-		log.Error().Err(err).Msg("Error open redis cluster connection")
+		log.Error().Ctx(ctx).Err(err).Msg("Error open redis cluster connection")
 		panic("Error open redis cluster connection")
 	}
 
-	log.Info().Msg("Redis cluster connected successfully")
+	log.Info().Ctx(ctx).Msg("Redis cluster connected successfully")
 	return client
 }
 

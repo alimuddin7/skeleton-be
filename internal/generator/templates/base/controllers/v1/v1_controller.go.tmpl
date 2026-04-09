@@ -13,8 +13,15 @@ import (
 
 type V1Controller interface {
 	HealthCheck(c fiber.Ctx) error
+	{{- range .Routes}}
+	{{. | title}}(c fiber.Ctx) error
+	{{- end}}
 	{{- range .Features}}
-	{{. | title}}() {{. | title}}Controller
+	Create{{. | title}}(c fiber.Ctx) error
+	Get{{. | title}}(c fiber.Ctx) error
+	List{{. | title}}(c fiber.Ctx) error
+	Update{{. | title}}(c fiber.Ctx) error
+	Delete{{. | title}}(c fiber.Ctx) error
 	{{- end}}
 	// [V1_CONTROLLER_INTERFACE_MARKER]
 }
@@ -23,9 +30,6 @@ type v1Controller struct {
 	Usecase   v1Usecases.Usecase
 	Logs      zerolog.Logger
 	Validator *validator.Validate
-	{{- range .Features}}
-	{{. | title}}Controller {{. | title}}Controller
-	{{- end}}
 	// [V1_CONTROLLER_IMPL_MARKER]
 }
 
@@ -33,17 +37,11 @@ func InitializeV1Controller(
 	usecases v1Usecases.Usecase,
 	l zerolog.Logger,
 	v *validator.Validate,
-	{{- range .Features}}
-	{{. | untitle}} {{. | title}}Controller,
-	{{- end}}
 ) V1Controller {
 	return &v1Controller{
 		Usecase:   usecases,
 		Logs:      l,
 		Validator: v,
-		{{- range .Features}}
-		{{. | title}}Controller: {{. | untitle}},
-		{{- end}}
 	}
 }
 
@@ -67,9 +65,3 @@ func (ctrl *v1Controller) HealthCheck(c fiber.Ctx) error {
 	res, err := ctrl.Usecase.HealthCheck(c.Context())
 	return helpers.ResponseFormatter(c, res, err, "")
 }
-
-{{- range .Features}}
-func (ctrl *v1Controller) {{. | title}}() {{. | title}}Controller {
-	return ctrl.{{. | title}}Controller
-}
-{{- end}}

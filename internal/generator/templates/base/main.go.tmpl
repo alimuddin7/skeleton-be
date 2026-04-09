@@ -79,13 +79,50 @@ func main() {
 	{{- end}}
 	{{- end}}
 
-	{{- if has .Modules "nats"}}
+	{{- if or (has .Modules "nats") (has .Modules "nats-consumer") (has .Modules "nats-publisher")}}
 	if natsConn := a.Repo.GetNats().GetConn(); natsConn != nil {
 		logger.Info().Ctx(ctx).Msg("Draining NATS connection...")
 		if err := natsConn.Drain(); err != nil {
 			logger.Error().Ctx(ctx).Err(err).Msg("Error draining NATS connection")
 		} else {
 			logger.Info().Ctx(ctx).Msg("NATS connection drained successfully")
+		}
+	}
+	{{- end}}
+
+	{{- if or (has .Modules "kafka") (has .Modules "kafka-consumer") (has .Modules "kafka-publisher")}}
+	if kafkaRepo := a.Repo.GetKafka(); kafkaRepo != nil {
+		if kafkaConsumer := kafkaRepo.GetConsumer(); kafkaConsumer != nil {
+			logger.Info().Ctx(ctx).Msg("Closing Kafka consumer...")
+			if err := kafkaConsumer.Close(); err != nil {
+				logger.Error().Ctx(ctx).Err(err).Msg("Error closing Kafka consumer")
+			} else {
+				logger.Info().Ctx(ctx).Msg("Kafka consumer closed successfully")
+			}
+		}
+		if kafkaProducer := kafkaRepo.GetProducer(); kafkaProducer != nil {
+			logger.Info().Ctx(ctx).Msg("Flushing and closing Kafka producer...")
+			kafkaProducer.Flush(15 * 1000)
+			kafkaProducer.Close()
+			logger.Info().Ctx(ctx).Msg("Kafka producer closed successfully")
+		}
+	}
+	{{- end}}
+
+	{{- if or (has .Modules "asynq") (has .Modules "asynq-consumer") (has .Modules "asynq-publisher")}}
+	if asynqRepo := a.Repo.GetAsynq(); asynqRepo != nil {
+		if asynqServer := asynqRepo.GetServer(); asynqServer != nil {
+			logger.Info().Ctx(ctx).Msg("Shutting down Asynq server...")
+			asynqServer.Shutdown()
+			logger.Info().Ctx(ctx).Msg("Asynq server shut down successfully")
+		}
+		if asynqClient := asynqRepo.GetClient(); asynqClient != nil {
+			logger.Info().Ctx(ctx).Msg("Closing Asynq client...")
+			if err := asynqClient.Close(); err != nil {
+				logger.Error().Ctx(ctx).Err(err).Msg("Error closing Asynq client")
+			} else {
+				logger.Info().Ctx(ctx).Msg("Asynq client closed successfully")
+			}
 		}
 	}
 	{{- end}}

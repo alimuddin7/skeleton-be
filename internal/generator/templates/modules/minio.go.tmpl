@@ -2,11 +2,8 @@ package minio
 
 import (
 	"context"
-<<<<<<< Updated upstream
-=======
 	"io"
 	"net/url"
->>>>>>> Stashed changes
 	"{{.ProjectName}}/configs"
 	"time"
 
@@ -52,29 +49,46 @@ func (m *minioRepository) GetClient() *minio.Client {
 	return m.Client
 }
 
+func (m *minioRepository) UploadFile(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, contentType string) error {
+	_, err := m.Client.PutObject(ctx, bucketName, objectName, reader, objectSize, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		m.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to upload file to Minio")
+		return err
+	}
+	return nil
+}
 
-func (m *minioRepository) GetURL(ctx context.Context, bucketName, objectName string, expiry time.Duration, code string) (string, error) {
+func (m *minioRepository) GetURL(ctx context.Context, bucketName, objectName string, expiry time.Duration, fileName string) (string, error) {
 	urlMinio := configs.Cfg.Database.Minio.Domain
 
 	reqParams := make(url.Values)
 	reqParams.Set("response-content-type", "application/octet-stream")
-	reqParams.Set("response-content-disposition", "attachment; filename="+code)
+	reqParams.Set("response-content-disposition", `attachment; filename="`+fileName+`"`)
 
-	presignedURL, err := m.Client.PresignedGetObject(ctx, bucketName, objectName, expiry, reqParams)
+	client := m.Client
+
+	if urlMinio != "" {
+		customURL, err := url.Parse(urlMinio)
+		if err == nil {
+			conf := configs.Cfg.Database.Minio
+			customClient, errInit := minio.New(customURL.Host, &minio.Options{
+				Creds:  credentials.NewStaticV4(conf.KeyID, conf.Secret, ""),
+				Secure: customURL.Scheme == "https",
+			})
+			if errInit == nil {
+				client = customClient
+			}
+		}
+	}
+
+	presignedURL, err := client.PresignedGetObject(ctx, bucketName, objectName, expiry, reqParams)
 	if err != nil {
 		m.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to get presigned URL from Minio")
 		return "", err
 	}
 
-	resultURL := presignedURL.String()
-	if urlMinio != "" {
-		customURL, err := url.Parse(urlMinio)
-		if err == nil {
-			presignedURL.Scheme = customURL.Scheme
-			presignedURL.Host = customURL.Host
-			resultURL = presignedURL.String()
-		}
-	}
-
-	return resultURL, nil
+	return presignedURL.String(), nil
 }
+

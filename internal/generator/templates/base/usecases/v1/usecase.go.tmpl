@@ -11,6 +11,14 @@ import (
 	"{{.ProjectName}}/helpers"
 	{{- if .Modules}}
 	"{{.ProjectName}}/repositories"
+	{{- range .Modules}}
+	{{- if eq . "mysql"}}
+	mysql "{{$.ProjectName}}/repositories/mysql"
+	{{- end}}
+	{{- if eq . "postgresql"}}
+	postgre "{{$.ProjectName}}/repositories/postgre"
+	{{- end}}
+	{{- end}}
 	{{- end}}
 	{{- if .Hosts}}
 	"{{.ProjectName}}/hosts"
@@ -20,8 +28,15 @@ import (
 
 type Usecase interface {
 	HealthCheck(ctx context.Context) (dto.Response[[]models.DataHealthCheck], error)
+	{{- range .Routes}}
+	{{. | title}}(ctx context.Context) (dto.Response[any], error)
+	{{- end}}
 	{{- range .Features}}
-	{{. | title}}() {{. | title}}Usecase
+	Create{{. | title}}(ctx context.Context, req *dto.{{. | title}}Request) (dto.Response[any], error)
+	Get{{. | title}}(ctx context.Context, id int) (dto.Response[dto.{{. | title}}Response], error)
+	List{{. | title}}(ctx context.Context, page, limit int) (dto.Response[[]dto.{{. | title}}Response], error)
+	Update{{. | title}}(ctx context.Context, id int, req *dto.{{. | title}}Request) (dto.Response[any], error)
+	Delete{{. | title}}(ctx context.Context, id int) (dto.Response[any], error)
 	{{- end}}
 	// [V1_USECASE_INTERFACE_MARKER]
 	{{- if has .Modules "nats"}}
@@ -38,7 +53,12 @@ type usecase struct {
 	{{- end}}
 	Logs zerolog.Logger
 	{{- range .Features}}
-	{{. | title}}Usecase {{. | title}}Usecase
+	{{- $dbType := index $.FeatureDBs .}}
+	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
+	{{. | untitle}}Repo postgre.{{. | title}}Repository
+	{{- else}}
+	{{. | untitle}}Repo mysql.{{. | title}}Repository
+	{{- end}}
 	{{- end}}
 	// [V1_USECASE_IMPL_MARKER]
 }
@@ -52,7 +72,12 @@ func InitializeV1Usecase(
 	{{- end}}
 	l zerolog.Logger,
 	{{- range .Features}}
-	{{. | untitle}} {{. | title}}Usecase,
+	{{- $dbType := index $.FeatureDBs .}}
+	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
+	{{. | untitle}}Repo postgre.{{. | title}}Repository,
+	{{- else}}
+	{{. | untitle}}Repo mysql.{{. | title}}Repository,
+	{{- end}}
 	{{- end}}
 ) Usecase {
 	return &usecase{
@@ -64,7 +89,7 @@ func InitializeV1Usecase(
 		{{- end}}
 		Logs: l,
 		{{- range .Features}}
-		{{. | title}}Usecase: {{. | untitle}},
+		{{. | untitle}}Repo: {{. | untitle}}Repo,
 		{{- end}}
 	}
 }
@@ -99,12 +124,6 @@ func (u *usecase) HealthCheck(ctx context.Context) (dto.Response[[]models.DataHe
 	
 	return helpers.GenerateResponseHealthCheck(healthChecks...), nil
 }
-
-{{- range .Features}}
-func (u *usecase) {{. | title}}() {{. | title}}Usecase {
-	return u.{{. | title}}Usecase
-}
-{{- end}}
 
 {{- if has .Modules "nats"}}
 func (u *usecase) ExampleNatsHandler(msg jetstream.Msg) {

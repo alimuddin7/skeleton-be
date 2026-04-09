@@ -5,45 +5,17 @@ import (
 	"math"
 	"{{.ProjectName}}/models"
 	"{{.ProjectName}}/models/dto"
-	{{- if eq .RepoPackage "postgre"}}
-	"{{.ProjectName}}/repositories/postgre"
-	{{- else if eq .RepoPackage "mysql"}}
-	"{{.ProjectName}}/repositories/mysql"
-	{{- else}}
-	"{{.ProjectName}}/repositories"
-	{{- end}}
-	"github.com/rs/zerolog"
 
 	// [V1_USECASE_LOCAL_IMPORT_MARKER]
 )
 
 {{if .IsCRUD}}
-type {{.FeatureName}}Usecase interface {
-	Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response[any], error)
-	Get(ctx context.Context, id int) (dto.Response[dto.{{.FeatureName}}Response], error)
-	List(ctx context.Context, page, limit int) (dto.Response[[]dto.{{.FeatureName}}Response], error)
-	Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response[any], error)
-	Delete(ctx context.Context, id int) (dto.Response[any], error)
-}
-
-type {{.FeatureNameLower}}Usecase struct {
-	repo {{.RepoPackage}}.{{.FeatureName}}Repository
-	logs zerolog.Logger
-}
-
-func New{{.FeatureName}}Usecase(repo {{.RepoPackage}}.{{.FeatureName}}Repository, logs zerolog.Logger) {{.FeatureName}}Usecase {
-	return &{{.FeatureNameLower}}Usecase{
-		repo: repo,
-		logs: logs,
-	}
-}
-
-func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
+func (u *usecase) Create{{.FeatureName}}(ctx context.Context, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
 	data := models.{{.FeatureName}}{
 		Name: req.Name,
 	}
-	if err := u.repo.Create(ctx, &data); err != nil {
-		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to create {{.FeatureNameLower}}")
+	if err := u.{{.FeatureNameLower}}Repo.Create(ctx, &data); err != nil {
+		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to create {{.FeatureNameLower}}")
 		return dto.Response[any]{}, err
 	}
 
@@ -55,10 +27,10 @@ func (u *{{.FeatureNameLower}}Usecase) Create(ctx context.Context, req *dto.{{.F
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Response[dto.{{.FeatureName}}Response], error) {
-	data, err := u.repo.Get(ctx, id)
+func (u *usecase) Get{{.FeatureName}}(ctx context.Context, id int) (dto.Response[dto.{{.FeatureName}}Response], error) {
+	data, err := u.{{.FeatureNameLower}}Repo.Get(ctx, id)
 	if err != nil {
-		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}}")
+		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}}")
 		return dto.Response[dto.{{.FeatureName}}Response]{}, err
 	}
 
@@ -70,11 +42,11 @@ func (u *{{.FeatureNameLower}}Usecase) Get(ctx context.Context, id int) (dto.Res
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int) (dto.Response[[]dto.{{.FeatureName}}Response], error) {
+func (u *usecase) List{{.FeatureName}}(ctx context.Context, page, limit int) (dto.Response[[]dto.{{.FeatureName}}Response], error) {
 	offset := (page - 1) * limit
-	data, count, err := u.repo.List(ctx, limit, offset)
+	data, count, err := u.{{.FeatureNameLower}}Repo.List(ctx, limit, offset)
 	if err != nil {
-		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to list {{.FeatureNameLower}}s")
+		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to list {{.FeatureNameLower}}s")
 		return dto.Response[[]dto.{{.FeatureName}}Response]{}, err
 	}
 
@@ -107,10 +79,10 @@ func (u *{{.FeatureNameLower}}Usecase) List(ctx context.Context, page, limit int
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
-	existing, err := u.repo.Get(ctx, id)
+func (u *usecase) Update{{.FeatureName}}(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
+	existing, err := u.{{.FeatureNameLower}}Repo.Get(ctx, id)
 	if err != nil {
-		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}} for update")
+		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}} for update")
 		return dto.Response[any]{}, err
 	}
 
@@ -118,8 +90,8 @@ func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *
 	existing.Name = req.Name
 	// Add more field updates here as needed
 
-	if err := u.repo.Update(ctx, existing); err != nil {
-		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to update {{.FeatureNameLower}}")
+	if err := u.{{.FeatureNameLower}}Repo.Update(ctx, existing); err != nil {
+		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to update {{.FeatureNameLower}}")
 		return dto.Response[any]{}, err
 	}
 
@@ -131,9 +103,9 @@ func (u *{{.FeatureNameLower}}Usecase) Update(ctx context.Context, id int, req *
 	}, nil
 }
 
-func (u *{{.FeatureNameLower}}Usecase) Delete(ctx context.Context, id int) (dto.Response[any], error) {
-	if err := u.repo.Delete(ctx, id); err != nil {
-		u.logs.Error().Ctx(ctx).Err(err).Msg("Failed to delete {{.FeatureNameLower}}")
+func (u *usecase) Delete{{.FeatureName}}(ctx context.Context, id int) (dto.Response[any], error) {
+	if err := u.{{.FeatureNameLower}}Repo.Delete(ctx, id); err != nil {
+		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to delete {{.FeatureNameLower}}")
 		return dto.Response[any]{}, err
 	}
 

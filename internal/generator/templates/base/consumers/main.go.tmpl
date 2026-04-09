@@ -33,11 +33,11 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Us
 	// --- NATS JetStream Consumers ---
 	consumerName := configs.Cfg.General.ServiceName
 	natsConsumers := []NatsConsumerConfig{
-		{
-			StreamName:  configs.Cfg.Database.Nats.ExampleStream,
-			SubjectName: configs.Cfg.Database.Nats.ExampleConsumer,
-			Handler:     v1Usecase.ExampleNatsHandler,
-		},
+		// {
+		// 	  StreamName:  configs.Cfg.Database.Nats.ExampleStream,
+		//	  SubjectName: configs.Cfg.Database.Nats.ExampleConsumer,
+		//	  Handler:     v1Usecase.ExampleNatsHandler,
+		// },
 	}
 	for _, conf := range natsConsumers {
 		_, err := repo.GetNats().Consume(

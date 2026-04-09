@@ -123,16 +123,7 @@ Example:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		dbType, _ := cmd.Flags().GetString("db")
-		if dbType == "" {
-			if err := huh.NewSelect[string]().
-				Title("Select Database").
-				Options(huh.NewOptions("mysql", "postgresql")...).
-				Value(&dbType).
-				Run(); err != nil {
-				return fmt.Errorf("add crud cancelled: %w", err)
-			}
-		}
-		fmt.Printf("Generating CRUD for %s using %s...\n", name, dbType)
+		fmt.Printf("Generating CRUD for %s...\n", name)
 		if err := generator.AddCRUD(name, dbType); err != nil {
 			return fmt.Errorf("failed to generate CRUD: %w", err)
 		}

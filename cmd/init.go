@@ -41,7 +41,7 @@ Available Infrastructure Modules:
 			serviceCode = "01"
 		}
 		projectTypes := make([]string, 0)
-		messagingModules := make([]string, 0)
+		var messagingBroker string
 		messagingRole := "Consumer"
 
 		projectType := fType
@@ -95,7 +95,13 @@ Available Infrastructure Modules:
 						huh.NewOption("Publisher (Message Producer)", "Publisher"),
 						huh.NewOption("gRPC", "gRPC"),
 					).
-					Value(&projectTypes),
+					Value(&projectTypes).
+					Validate(func(t []string) error {
+						if len(t) == 0 {
+							return fmt.Errorf("please select at least one project type using Spacebar")
+						}
+						return nil
+					}),
 			))
 		} else {
 			projectTypes = []string{projectType}
@@ -128,15 +134,16 @@ Available Infrastructure Modules:
 
 		// Step 6: Messaging Modules (NATS / Kafka / Asynq)
 		groups = append(groups, huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Messaging / Queue Modules").
-				Description("Select messaging brokers to integrate (Worker & Publisher roles will be set next)").
+			huh.NewSelect[string]().
+				Title("Messaging / Queue Broker").
+				Description("Select a primary messaging broker to integrate.").
 				Options(
+					huh.NewOption("None", ""),
 					huh.NewOption("NATS JetStream", "nats"),
 					huh.NewOption("Kafka", "kafka"),
 					huh.NewOption("Asynq (Redis-based)", "asynq"),
 				).
-				Value(&messagingModules),
+				Value(&messagingBroker),
 		))
 
 		// Step 7: Role for messaging — always shown, ignored if no broker selected
@@ -199,7 +206,7 @@ Available Infrastructure Modules:
 		fmt.Printf("\n--- Debug Selections ---\n")
 		fmt.Printf("ProjectTypes: %v\n", projectTypes)
 		fmt.Printf("Modules (Infrastructure): %v\n", modules)
-		fmt.Printf("MessagingModules: %v\n", messagingModules)
+		fmt.Printf("MessagingBroker: %s\n", messagingBroker)
 		fmt.Printf("MessagingRole: %s\n", messagingRole)
 		fmt.Printf("------------------------\n")
 
@@ -228,16 +235,16 @@ Available Infrastructure Modules:
 			}
 		}
 
-		// Add messaging modules based on selected brokers + role
-		for _, broker := range messagingModules {
+		// Add messaging broker and its role
+		if messagingBroker != "" {
 			// Always add the base infra module
-			config.Modules = append(config.Modules, broker)
+			config.Modules = append(config.Modules, messagingBroker)
 			// Add role-specific module strings
 			if messagingRole == "Consumer" || messagingRole == "Both" {
-				config.Modules = append(config.Modules, broker+"-consumer")
+				config.Modules = append(config.Modules, messagingBroker+"-consumer")
 			}
 			if messagingRole == "Publisher" || messagingRole == "Both" {
-				config.Modules = append(config.Modules, broker+"-publisher")
+				config.Modules = append(config.Modules, messagingBroker+"-publisher")
 			}
 		}
 

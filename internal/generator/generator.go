@@ -26,8 +26,9 @@ type Config struct {
 	ProjectType  string            `json:"projectType,omitempty"` // Deprecated: use ProjectTypes
 	Modules      []string          `json:"modules"`
 	Hosts        []string          `json:"hosts"`
-	Features     []string          `json:"features,omitempty"`   // CRUD feature names (e.g. ["user", "product"])
-	FeatureDBs   map[string]string `json:"featureDBs,omitempty"` // Maps feature to db type (e.g. {"user": "postgresql"})
+	Features     []string          `json:"features,omitempty"`   // CRUD feature names
+	FeatureDBs   map[string]string `json:"featureDBs,omitempty"` // Maps feature to db type
+	Routes       []string          `json:"routes,omitempty"`     // Non-CRUD route names
 }
 
 func Generate(destDir string, cfg Config) error {
@@ -170,14 +171,19 @@ func AddFeature(name string) error {
 		return err
 	}
 
-	// Track feature in config for regeneration
+	// Track non-CRUD route in config for regeneration
 	lowerName := strings.ToLower(name)
 	for _, f := range cfg.Features {
 		if f == lowerName {
-			return fmt.Errorf("feature %s already exists", lowerName)
+			return fmt.Errorf("feature %s already exists as a CRUD entity", lowerName)
 		}
 	}
-	cfg.Features = append(cfg.Features, lowerName)
+	for _, r := range cfg.Routes {
+		if r == lowerName {
+			return fmt.Errorf("route %s already exists", lowerName)
+		}
+	}
+	cfg.Routes = append(cfg.Routes, lowerName)
 
 	featureCfg := createFeatureConfig(cfg, name, false, "")
 	if err := renderDomainComponents(featureCfg); err != nil {
@@ -196,6 +202,10 @@ func AddCRUD(name, dbType string) error {
 	cfg, err := loadProjectState("skeleton.json")
 	if err != nil {
 		return err
+	}
+
+	if dbType == "" {
+		dbType = cfg.Database
 	}
 
 	if dbType == "postgres" {

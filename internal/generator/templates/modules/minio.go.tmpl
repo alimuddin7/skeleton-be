@@ -2,7 +2,14 @@ package minio
 
 import (
 	"context"
+<<<<<<< Updated upstream
+=======
+	"io"
+	"net/url"
+>>>>>>> Stashed changes
 	"{{.ProjectName}}/configs"
+	"time"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/rs/zerolog"
@@ -15,6 +22,8 @@ type (
 	}
 	MinioRepository interface {
 		GetClient() *minio.Client
+		UploadFile(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, contentType string) error
+		GetURL(ctx context.Context, bucketName, objectName string, expiry time.Duration, code string) (string, error)
 	}
 )
 
@@ -41,4 +50,31 @@ func ConnectMinio(ctx context.Context, log zerolog.Logger) *minio.Client {
 
 func (m *minioRepository) GetClient() *minio.Client {
 	return m.Client
+}
+
+
+func (m *minioRepository) GetURL(ctx context.Context, bucketName, objectName string, expiry time.Duration, code string) (string, error) {
+	urlMinio := configs.Cfg.Database.Minio.Domain
+
+	reqParams := make(url.Values)
+	reqParams.Set("response-content-type", "application/octet-stream")
+	reqParams.Set("response-content-disposition", "attachment; filename="+code)
+
+	presignedURL, err := m.Client.PresignedGetObject(ctx, bucketName, objectName, expiry, reqParams)
+	if err != nil {
+		m.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to get presigned URL from Minio")
+		return "", err
+	}
+
+	resultURL := presignedURL.String()
+	if urlMinio != "" {
+		customURL, err := url.Parse(urlMinio)
+		if err == nil {
+			presignedURL.Scheme = customURL.Scheme
+			presignedURL.Host = customURL.Host
+			resultURL = presignedURL.String()
+		}
+	}
+
+	return resultURL, nil
 }

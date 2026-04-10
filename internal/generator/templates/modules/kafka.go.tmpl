@@ -3,62 +3,52 @@ package kafka
 import (
 	"context"
 	"{{.ProjectName}}/configs"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/rs/zerolog"
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type (
-	kafkaRepository struct {
-		Consumer *kafka.Consumer
-		Producer *kafka.Producer
-		Logs     zerolog.Logger
-	}
-	KafkaRepository interface {
-		GetConsumer() *kafka.Consumer
-		GetProducer() *kafka.Producer
+	KafkaRepository struct {
+		Client *kgo.Client
+		Logs   zerolog.Logger
 	}
 )
 
-func InitializeKafkaRepository(consumer *kafka.Consumer, producer *kafka.Producer, log zerolog.Logger) KafkaRepository {
-	return &kafkaRepository{
-		Consumer: consumer,
-		Producer: producer,
-		Logs:     log,
+func InitializeKafkaRepository(client *kgo.Client, log zerolog.Logger) *KafkaRepository {
+	return &KafkaRepository{
+		Client: client,
+		Logs:   log,
 	}
 }
 
-func ConnectKafkaReader(ctx context.Context, log zerolog.Logger) *kafka.Consumer {
+func ConnectKafka(ctx context.Context, log zerolog.Logger) *kgo.Client {
 	conf := configs.Cfg.Database.Kafka
-	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": conf.Address,
-		"group.id":          conf.GroupID,
-		"auto.offset.reset": "earliest",
-	})
+	
+	opts := []kgo.Opt{
+		kgo.SeedBrokers(conf.Address),
+	}
+
+	if conf.GroupID != "" {
+		opts = append(opts, kgo.ConsumerGroup(conf.GroupID))
+	}
+
+	client, err := kgo.NewClient(opts...)
 	if err != nil {
-		log.Error().Ctx(ctx).Err(err).Msg("Error creating kafka consumer")
+		log.Error().Ctx(ctx).Err(err).Msg("Error creating kafka client")
 		panic(err)
 	}
-	log.Info().Ctx(ctx).Msg("Kafka reader connected successfully")
-	return c
-}
 
-func ConnectKafkaWriter(ctx context.Context, log zerolog.Logger) *kafka.Producer {
-	conf := configs.Cfg.Database.Kafka
-	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": conf.Address,
-	})
-	if err != nil {
-		log.Error().Ctx(ctx).Err(err).Msg("Error creating kafka producer")
+	// Verify connection
+	if err := client.Ping(ctx); err != nil {
+		log.Error().Ctx(ctx).Err(err).Msg("Kafka ping failed")
 		panic(err)
 	}
-	log.Info().Ctx(ctx).Msg("Kafka writer connected successfully")
-	return p
+
+	log.Info().Ctx(ctx).Msg("Kafka client connected successfully")
+	return client
 }
 
-func (k *kafkaRepository) GetConsumer() *kafka.Consumer {
-	return k.Consumer
+func (k *KafkaRepository) GetClient() *kgo.Client {
+	return k.Client
 }
 
-func (k *kafkaRepository) GetProducer() *kafka.Producer {
-	return k.Producer
-}

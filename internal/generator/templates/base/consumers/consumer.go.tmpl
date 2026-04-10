@@ -12,7 +12,7 @@ import (
 	"github.com/hibiken/asynq"
 	{{- end}}
 	{{- if has .Modules "kafka-consumer"}}
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/twmb/franz-go/pkg/kgo"
 	{{- end}}
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -28,7 +28,7 @@ type Consumer interface {
 	ConsumeNats(msg natsgo.Msg)
 	{{- end}}
 	{{- if has .Modules "kafka-consumer"}}
-	ConsumeKafka(msg *kafka.Message) error
+	ConsumeKafka(record *kgo.Record) error
 	{{- end}}
 	{{- if has .Modules "asynq-consumer"}}
 	ProcessTask(ctx context.Context, t *asynq.Task) error
@@ -61,9 +61,9 @@ func (c *consumer) ConsumeNats(msg natsgo.Msg) {
 
 {{- if has .Modules "kafka-consumer"}}
 
-func (c *consumer) ConsumeKafka(msg *kafka.Message) error {
+func (c *consumer) ConsumeKafka(record *kgo.Record) error {
 	var traceID string
-	for _, header := range msg.Headers {
+	for _, header := range record.Headers {
 		if header.Key == "X-Trace-ID" {
 			traceID = string(header.Value)
 			break
@@ -74,7 +74,7 @@ func (c *consumer) ConsumeKafka(msg *kafka.Message) error {
 	}
 
 	ctx := context.WithValue(context.Background(), constants.TRANSACTION_ID, traceID)
-	c.logs.Info().Ctx(ctx).Msgf("[Kafka] Received: %s", string(msg.Value))
+	c.logs.Info().Ctx(ctx).Msgf("[Kafka] Received: %s", string(record.Value))
 	
 	// TODO: implement Kafka message processing
 	return nil

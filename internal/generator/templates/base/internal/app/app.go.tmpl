@@ -129,7 +129,7 @@ func InitializeApp() *App {
 		redis.InitializeRedisRepository(redis.ConnectRedis(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "kafka"}}
-		kafka.InitializeKafkaRepository(kafka.ConnectKafkaReader(startupCtx, logger), kafka.ConnectKafkaWriter(startupCtx, logger), logger),
+		kafka.InitializeKafkaRepository(kafka.ConnectKafka(startupCtx, logger), logger),
 		{{- end}}
 		{{- if eq . "nats"}}
 		nats.InitializeNatsRepository(nc, js, logger),

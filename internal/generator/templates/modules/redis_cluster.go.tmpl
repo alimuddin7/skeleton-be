@@ -6,59 +6,47 @@ import (
 	"{{.ProjectName}}/models"
 	"time"
 
-	redis "github.com/redis/go-redis/v9"
+	"github.com/redis/rueidis"
 	"github.com/rs/zerolog"
 )
 
 type RedisClusterRepository interface {
-	GetQueue(ctx context.Context, d time.Duration, key string) ([]string, error)
-	PushJobRedis(ctx context.Context, key string, value interface{}) error
-	SaveRedisExp(ctx context.Context, exp time.Duration, key string, val interface{}) error
-	GetRedisKey(ctx context.Context, Key string) (string, error)
-	Increment(ctx context.Context, key string) error
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key, val string) error
+	SetEx(ctx context.Context, key, val string, expiration time.Duration) error
+	SetNX(ctx context.Context, key, val string) error
+	Del(ctx context.Context, key string) error
+	Incr(ctx context.Context, key string) error
+	Decr(ctx context.Context, key string) error
+	
+	// Pub/Sub (Sharded for Cluster)
+	Publish(ctx context.Context, channel, message string) error
+	Subscribe(ctx context.Context, channel string, handler func(msg rueidis.PubSubMessage)) error
+	
 	HealthCheck(ctx context.Context) models.DataHealthCheck
+
+	// Deprecated / Compatibility
+	GetQueue(ctx context.Context, d time.Duration, key string) ([]string, error)
 }
 
 type redisClusterRepository struct {
-	Client *redis.ClusterClient
+	Client rueidis.Client
 	Logs   zerolog.Logger
 }
 
-func InitializeRedisClusterRepository(conn *redis.ClusterClient, log zerolog.Logger) RedisClusterRepository {
+func InitializeRedisClusterRepository(conn rueidis.Client, log zerolog.Logger) RedisClusterRepository {
 	return &redisClusterRepository{
 		Client: conn,
 		Logs:   log,
 	}
 }
 
-func ConnectRedisCluster(ctx context.Context, log zerolog.Logger) *redis.ClusterClient {
-	client := redis.NewClusterClient(&redis.ClusterOptions{
-		ClusterSlots: func(ctx context.Context) ([]redis.ClusterSlot, error) {
-			conf := configs.Cfg.Database.RedisCluster
-			if len(conf.Address) != len(conf.SlaveAddress) {
-				log.Fatal().Ctx(ctx).Msg("Redis Cluster Address and SlaveAddress length mismatch")
-			}
-			slots := make([]redis.ClusterSlot, len(conf.Address))
-			start := 0
-			diff := 5461
-			for i, add := range conf.Address {
-				slots[i] = redis.ClusterSlot{
-					Start: start,
-					End:   diff,
-					Nodes: []redis.ClusterNode{
-						{Addr: add},
-						{Addr: conf.SlaveAddress[i]},
-					},
-				}
-				start = diff + 1
-			}
-			return slots, nil
-		},
-		RouteRandomly: true,
-	})
-
-	err := client.ForEachShard(ctx, func(c context.Context, shard *redis.Client) error {
-		return shard.Ping(c).Err()
+func ConnectRedisCluster(ctx context.Context, log zerolog.Logger) rueidis.Client {
+	conf := configs.Cfg.Database.RedisCluster
+	
+	client, err := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: conf.Address,
+		ShuffleInit: true,
 	})
 
 	if err != nil {
@@ -70,24 +58,46 @@ func ConnectRedisCluster(ctx context.Context, log zerolog.Logger) *redis.Cluster
 	return client
 }
 
+func (r *redisClusterRepository) Get(ctx context.Context, key string) (string, error) {
+	return r.Client.Do(ctx, r.Client.B().Get().Key(key).Build()).ToString()
+}
+
+func (r *redisClusterRepository) Set(ctx context.Context, key, val string) error {
+	return r.Client.Do(ctx, r.Client.B().Set().Key(key).Value(val).Build()).Error()
+}
+
+func (r *redisClusterRepository) SetEx(ctx context.Context, key, val string, expiration time.Duration) error {
+	return r.Client.Do(ctx, r.Client.B().Set().Key(key).Value(val).Px(expiration).Build()).Error()
+}
+
+func (r *redisClusterRepository) SetNX(ctx context.Context, key, val string) error {
+	return r.Client.Do(ctx, r.Client.B().Set().Key(key).Value(val).Nx().Build()).Error()
+}
+
+func (r *redisClusterRepository) Del(ctx context.Context, key string) error {
+	return r.Client.Do(ctx, r.Client.B().Del().Key(key).Build()).Error()
+}
+
+func (r *redisClusterRepository) Incr(ctx context.Context, key string) error {
+	return r.Client.Do(ctx, r.Client.B().Incr().Key(key).Build()).Error()
+}
+
+func (r *redisClusterRepository) Decr(ctx context.Context, key string) error {
+	return r.Client.Do(ctx, r.Client.B().Decr().Key(key).Build()).Error()
+}
+
+func (r *redisClusterRepository) Publish(ctx context.Context, channel, message string) error {
+	// For clusters, Spublish (Sharded) is often preferred for performance
+	return r.Client.Do(ctx, r.Client.B().Spublish().Channel(channel).Message(message).Build()).Error()
+}
+
+func (r *redisClusterRepository) Subscribe(ctx context.Context, channel string, handler func(msg rueidis.PubSubMessage)) error {
+	// For clusters, Ssubscribe (Sharded) is often preferred to reduce cluster-wide broadcast
+	return r.Client.Receive(ctx, r.Client.B().Ssubscribe().Channel(channel).Build(), handler)
+}
+
 func (r *redisClusterRepository) GetQueue(ctx context.Context, d time.Duration, key string) ([]string, error) {
-	return r.Client.BRPop(ctx, d, key).Result()
-}
-
-func (r *redisClusterRepository) PushJobRedis(ctx context.Context, key string, value interface{}) error {
-	return r.Client.RPush(ctx, key, value).Err()
-}
-
-func (r *redisClusterRepository) SaveRedisExp(ctx context.Context, exp time.Duration, key string, val interface{}) error {
-	return r.Client.Set(ctx, key, val, exp).Err()
-}
-
-func (r *redisClusterRepository) GetRedisKey(ctx context.Context, key string) (string, error) {
-	return r.Client.Get(ctx, key).Result()
-}
-
-func (r *redisClusterRepository) Increment(ctx context.Context, key string) error {
-	return r.Client.Incr(ctx, key).Err()
+	return r.Client.Do(ctx, r.Client.B().Brpop().Key(key).Timeout(d.Seconds()).Build()).AsStrSlice()
 }
 
 func (r *redisClusterRepository) HealthCheck(ctx context.Context) models.DataHealthCheck {
@@ -96,10 +106,7 @@ func (r *redisClusterRepository) HealthCheck(ctx context.Context) models.DataHea
 		StatusCode:  200,
 	}
 	
-	err := r.Client.ForEachShard(ctx, func(ctx context.Context, shard *redis.Client) error {
-		return shard.Ping(ctx).Err()
-	})
-	
+	err := r.Client.Do(ctx, r.Client.B().Ping().Build()).Error()
 	if err != nil {
 		r.Logs.Error().Ctx(ctx).Err(err).Msg("Redis Cluster health check failed")
 		res.StatusCode = 500
@@ -109,3 +116,4 @@ func (r *redisClusterRepository) HealthCheck(ctx context.Context) models.DataHea
 	
 	return res
 }
+

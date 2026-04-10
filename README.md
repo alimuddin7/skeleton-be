@@ -47,9 +47,9 @@ This generator leverages industry-standard, high-performance libraries to constr
 - **Validation**: [Validator v10](https://github.com/go-playground/validator) (Struct validation)
 - **Messaging/Queue**: 
   - [NATS JetStream](https://github.com/nats-io/nats.go)
-  - Kafka
+  - [franz-go](https://github.com/twmb/franz-go) (Pure Go Kafka client)
   - [Asynq](https://github.com/hibiken/asynq) (Redis-based tasks)
-- **Caching**: [Go-Redis v9](https://github.com/redis/go-redis)
+- **Caching**: [Rueidis](https://github.com/redis/rueidis) (High-performance Redis client)
 - **Storage**: [MinIO go v7](https://github.com/minio/minio-go)
 
 ---

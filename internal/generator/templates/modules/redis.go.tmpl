@@ -5,37 +5,51 @@ import (
 	"fmt"
 	"{{.ProjectName}}/configs"
 	"{{.ProjectName}}/models"
-	"github.com/redis/go-redis/v9"
+	"time"
+	"github.com/redis/rueidis"
 	"github.com/rs/zerolog"
 )
 
 type (
 	redisRepository struct {
-		Client *redis.Client
+		Client rueidis.Client
 		Logs   zerolog.Logger
 	}
 	RedisRepository interface {
-		GetClient() *redis.Client
+		GetClient() rueidis.Client
 		HealthCheck(ctx context.Context) models.DataHealthCheck
+
+		// Standard Operations
+		Get(ctx context.Context, key string) (string, error)
+		Set(ctx context.Context, key, val string) error
+		SetEx(ctx context.Context, key, val string, expiration time.Duration) error
+		SetNX(ctx context.Context, key, val string) error
+		Del(ctx context.Context, key string) error
+		Incr(ctx context.Context, key string) error
+		Decr(ctx context.Context, key string) error
+		
+		// Pub/Sub
+		Publish(ctx context.Context, channel, message string) error
+		Subscribe(ctx context.Context, channel string, handler func(msg rueidis.PubSubMessage)) error
 	}
 )
 
-func InitializeRedisRepository(conn *redis.Client, log zerolog.Logger) RedisRepository {
+func InitializeRedisRepository(conn rueidis.Client, log zerolog.Logger) RedisRepository {
 	return &redisRepository{
 		Client: conn,
 		Logs:   log,
 	}
 }
 
-func ConnectRedis(ctx context.Context, log zerolog.Logger) *redis.Client {
+func ConnectRedis(ctx context.Context, log zerolog.Logger) rueidis.Client {
 	conf := configs.Cfg.Database.Redis
-	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", conf.Address, conf.Port),
-		Password: conf.Password,
-		DB:       conf.DBType,
+	client, err := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress: []string{fmt.Sprintf("%s:%d", conf.Address, conf.Port)},
+		Password:    conf.Password,
+		SelectDB:    conf.DBType,
 	})
 
-	if _, err := client.Ping(ctx).Result(); err != nil {
+	if err != nil {
 		log.Error().Ctx(ctx).Err(err).Msg("Error open redis connection")
 		panic("Error open redis connection")
 	}
@@ -44,8 +58,44 @@ func ConnectRedis(ctx context.Context, log zerolog.Logger) *redis.Client {
 	return client
 }
 
-func (r *redisRepository) GetClient() *redis.Client {
+func (r *redisRepository) GetClient() rueidis.Client {
 	return r.Client
+}
+
+func (r *redisRepository) Get(ctx context.Context, key string) (string, error) {
+	return r.Client.Do(ctx, r.Client.B().Get().Key(key).Build()).ToString()
+}
+
+func (r *redisRepository) Set(ctx context.Context, key, val string) error {
+	return r.Client.Do(ctx, r.Client.B().Set().Key(key).Value(val).Build()).Error()
+}
+
+func (r *redisRepository) SetEx(ctx context.Context, key, val string, expiration time.Duration) error {
+	return r.Client.Do(ctx, r.Client.B().Set().Key(key).Value(val).Px(expiration).Build()).Error()
+}
+
+func (r *redisRepository) SetNX(ctx context.Context, key, val string) error {
+	return r.Client.Do(ctx, r.Client.B().Set().Key(key).Value(val).Nx().Build()).Error()
+}
+
+func (r *redisRepository) Del(ctx context.Context, key string) error {
+	return r.Client.Do(ctx, r.Client.B().Del().Key(key).Build()).Error()
+}
+
+func (r *redisRepository) Incr(ctx context.Context, key string) error {
+	return r.Client.Do(ctx, r.Client.B().Incr().Key(key).Build()).Error()
+}
+
+func (r *redisRepository) Decr(ctx context.Context, key string) error {
+	return r.Client.Do(ctx, r.Client.B().Decr().Key(key).Build()).Error()
+}
+
+func (r *redisRepository) Publish(ctx context.Context, channel, message string) error {
+	return r.Client.Do(ctx, r.Client.B().Publish().Channel(channel).Message(message).Build()).Error()
+}
+
+func (r *redisRepository) Subscribe(ctx context.Context, channel string, handler func(msg rueidis.PubSubMessage)) error {
+	return r.Client.Receive(ctx, r.Client.B().Subscribe().Channel(channel).Build(), handler)
 }
 
 func (r *redisRepository) HealthCheck(ctx context.Context) models.DataHealthCheck {
@@ -54,7 +104,8 @@ func (r *redisRepository) HealthCheck(ctx context.Context) models.DataHealthChec
 		StatusCode:  200,
 	}
 	
-	if _, err := r.Client.Ping(ctx).Result(); err != nil {
+	err := r.Client.Do(ctx, r.Client.B().Ping().Build()).Error()
+	if err != nil {
 		r.Logs.Error().Ctx(ctx).Err(err).Msg("Redis ping failed")
 		res.StatusCode = 500
 		res.AdditionalData = err.Error()
@@ -63,3 +114,4 @@ func (r *redisRepository) HealthCheck(ctx context.Context) models.DataHealthChec
 	
 	return res
 }
+

@@ -39,7 +39,7 @@ type Repository interface {
 	{{- else if eq . "redis"}}
 	GetRedis() redis.RedisRepository
 	{{- else if eq . "kafka"}}
-	GetKafka() kafka.KafkaRepository
+	GetKafka() *kafka.KafkaRepository
 	{{- else if eq . "nats"}}
 	GetNats() nats.NatsRepository
 	{{- else if eq . "minio"}}
@@ -64,7 +64,7 @@ type repository struct {
 	Redis redis.RedisRepository
 	{{- end}}
 	{{- if eq . "kafka"}}
-	Kafka kafka.KafkaRepository
+	Kafka *kafka.KafkaRepository
 	{{- end}}
 	{{- if eq . "nats"}}
 	Nats nats.NatsRepository
@@ -93,7 +93,7 @@ func InitializeRepository(
 	redisDb redis.RedisRepository,
 	{{- end}}
 	{{- if eq . "kafka"}}
-	kafkaDb kafka.KafkaRepository,
+	kafkaDb *kafka.KafkaRepository,
 	{{- end}}
 	{{- if eq . "nats"}}
 	natsDb nats.NatsRepository,
@@ -157,7 +157,7 @@ func (d *repository) GetRedis() redis.RedisRepository {
 }
 {{- end}}
 {{- if eq . "kafka"}}
-func (d *repository) GetKafka() kafka.KafkaRepository {
+func (d *repository) GetKafka() *kafka.KafkaRepository {
 	return d.Kafka
 }
 {{- end}}

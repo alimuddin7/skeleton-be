@@ -11,14 +11,6 @@ import (
 	"{{.ProjectName}}/helpers"
 	{{- if .Modules}}
 	"{{.ProjectName}}/repositories"
-	{{- range .Modules}}
-	{{- if eq . "mysql"}}
-	mysql "{{$.ProjectName}}/repositories/mysql"
-	{{- end}}
-	{{- if eq . "postgresql"}}
-	postgre "{{$.ProjectName}}/repositories/postgre"
-	{{- end}}
-	{{- end}}
 	{{- end}}
 	{{- if .Hosts}}
 	"{{.ProjectName}}/hosts"
@@ -52,14 +44,6 @@ type usecase struct {
 	Host hosts.Host
 	{{- end}}
 	Logs zerolog.Logger
-	{{- range .Features}}
-	{{- $dbType := index $.FeatureDBs .}}
-	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
-	{{. | untitle}}Repo postgre.{{. | title}}Repository
-	{{- else}}
-	{{. | untitle}}Repo mysql.{{. | title}}Repository
-	{{- end}}
-	{{- end}}
 	// [V1_USECASE_IMPL_MARKER]
 }
 
@@ -71,14 +55,6 @@ func InitializeV1Usecase(
 	h hosts.Host,
 	{{- end}}
 	l zerolog.Logger,
-	{{- range .Features}}
-	{{- $dbType := index $.FeatureDBs .}}
-	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
-	{{. | untitle}}Repo postgre.{{. | title}}Repository,
-	{{- else}}
-	{{. | untitle}}Repo mysql.{{. | title}}Repository,
-	{{- end}}
-	{{- end}}
 ) Usecase {
 	return &usecase{
 		{{- if .Modules}}
@@ -88,9 +64,6 @@ func InitializeV1Usecase(
 		Host: h,
 		{{- end}}
 		Logs: l,
-		{{- range .Features}}
-		{{. | untitle}}Repo: {{. | untitle}}Repo,
-		{{- end}}
 	}
 }
 

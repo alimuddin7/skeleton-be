@@ -34,6 +34,11 @@ func (h TraceIDHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 func InitializeZeroLogs() zerolog.Logger {
 	output := os.Stdout
 	// Add file based logging logic if needed (from configs)
+
+	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+		funcName := runtime.FuncForPC(pc).Name()
+		return fmt.Sprintf("%s:%d [%s]", path.Base(file), line, funcName)
+	}
 	
 	logger := zerolog.New(output).With().Timestamp().Str("service", configs.Cfg.General.ServiceName).Logger().Hook(TraceIDHook{})
 	return logger

@@ -10,10 +10,30 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
+
+func toPascalCase(s string) string {
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	})
+	for i, p := range parts {
+		if len(p) > 0 {
+			parts[i] = cases.Title(language.Und).String(strings.ToLower(p))
+		}
+	}
+	return strings.Join(parts, "")
+}
+
+func toUpperSnakeCase(s string) string {
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	})
+	return strings.ToUpper(strings.Join(parts, "_"))
+}
 
 //go:embed templates
 var templateFS embed.FS
@@ -69,7 +89,7 @@ func Generate(destDir string, cfg Config) error {
 			ProjectName:   cfg.ProjectName,
 			HostName:      host,
 			HostNameLower: lowerName,
-			HostNameTitle: cases.Title(language.Und).String(host),
+			HostNameTitle: toPascalCase(host),
 		}
 		if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
 			return err
@@ -154,7 +174,7 @@ func AddHost(name string) error {
 		ProjectName:   cfg.ProjectName,
 		HostName:      name,
 		HostNameLower: lowerName,
-		HostNameTitle: cases.Title(language.Und).String(name),
+		HostNameTitle: toPascalCase(name),
 	}
 
 	if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
@@ -335,7 +355,7 @@ import "fmt"
 func %s() {
 	fmt.Println("Hello from %s helper")
 }
-`, cases.Title(language.Und).String(helperName), cases.Title(language.Und).String(helperName), cases.Title(language.Und).String(helperName))
+`, toPascalCase(helperName), toPascalCase(helperName), toPascalCase(helperName))
 
 	return os.WriteFile(fileName, []byte(content), 0644)
 }
@@ -626,7 +646,7 @@ func createFeatureConfig(cfg *Config, name string, isCRUD bool, dbType string) f
 	}
 	return featureConfig{
 		ProjectName:      cfg.ProjectName,
-		FeatureName:      cases.Title(language.Und).String(name),
+		FeatureName:      toPascalCase(name),
 		FeatureNameLower: strings.ToLower(name),
 		IsCRUD:           isCRUD,
 		DBType:           dbType,
@@ -663,9 +683,11 @@ func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 	}
 
 	tmpl, err := template.New(filepath.Base(tmplPath)).Funcs(template.FuncMap{
-		"title": func(s string) string { return cases.Title(language.Und).String(s) },
+		"title": toPascalCase,
 		"upper": strings.ToUpper,
+		"upper_snake": toUpperSnakeCase,
 		"untitle": func(s string) string {
+			s = toPascalCase(s)
 			if len(s) == 0 {
 				return s
 			}

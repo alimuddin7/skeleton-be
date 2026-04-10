@@ -78,7 +78,7 @@ type Config struct {
 {{if .Hosts}}
 type Hosts struct {
 	{{- range .Hosts}}
-	{{. | title}} {{. | title}}Host `envconfig:"{{. | upper}}"`
+	{{. | title}} {{. | title}}Host `envconfig:"{{. | upper_snake}}"`
 	{{- end}}
 }
 {{end}}

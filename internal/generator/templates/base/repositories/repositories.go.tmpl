@@ -33,9 +33,9 @@ import (
 type Repository interface {
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	GetMysql() mysql.MysqlRepository
+	GetMysql() *mysql.MysqlRepository
 	{{- else if eq . "postgresql"}}
-	GetPostgre() postgre.PostgreRepository
+	GetPostgre() *postgre.PostgreRepository
 	{{- else if eq . "redis"}}
 	GetRedis() redis.RedisRepository
 	{{- else if eq . "kafka"}}
@@ -55,10 +55,10 @@ type Repository interface {
 type repository struct {
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	Mysql mysql.MysqlRepository
+	Mysql *mysql.MysqlRepository
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	Postgre postgre.PostgreRepository
+	Postgre *postgre.PostgreRepository
 	{{- end}}
 	{{- if eq . "redis"}}
 	Redis redis.RedisRepository
@@ -84,10 +84,10 @@ type repository struct {
 func InitializeRepository(
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
-	mysqlDb mysql.MysqlRepository,
+	mysqlDb *mysql.MysqlRepository,
 	{{- end}}
 	{{- if eq . "postgresql"}}
-	postgreDb postgre.PostgreRepository,
+	postgreDb *postgre.PostgreRepository,
 	{{- end}}
 	{{- if eq . "redis"}}
 	redisDb redis.RedisRepository,
@@ -142,12 +142,12 @@ func InitializeRepository(
 
 {{- range .Modules}}
 {{- if eq . "mysql"}}
-func (d *repository) GetMysql() mysql.MysqlRepository {
+func (d *repository) GetMysql() *mysql.MysqlRepository {
 	return d.Mysql
 }
 {{- end}}
 {{- if eq . "postgresql"}}
-func (d *repository) GetPostgre() postgre.PostgreRepository {
+func (d *repository) GetPostgre() *postgre.PostgreRepository {
 	return d.Postgre
 }
 {{- end}}

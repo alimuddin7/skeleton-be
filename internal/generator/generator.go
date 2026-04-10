@@ -686,6 +686,11 @@ func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 		"title": toPascalCase,
 		"upper": strings.ToUpper,
 		"upper_snake": toUpperSnakeCase,
+		"clean": func(s string) string {
+			return strings.ToLower(strings.Join(strings.FieldsFunc(s, func(r rune) bool {
+				return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+			}), ""))
+		},
 		"untitle": func(s string) string {
 			s = toPascalCase(s)
 			if len(s) == 0 {

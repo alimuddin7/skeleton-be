@@ -13,22 +13,17 @@ import (
 	"time"
 )
 
-type PostgreRepository interface {
-	HealthCheck(ctx context.Context) models.DataHealthCheck
-	GetDB() *gorm.DB
-}
-
-type postgreRepository struct {
+type PostgreRepository struct {
 	Db   *gorm.DB
 	Logs zerolog.Logger
 }
 
-func (p *postgreRepository) GetDB() *gorm.DB {
+func (p *PostgreRepository) GetDB() *gorm.DB {
 	return p.Db
 }
 
-func InitializePostgreRepository(conn *gorm.DB, log zerolog.Logger) PostgreRepository {
-	return &postgreRepository{
+func InitializePostgreRepository(conn *gorm.DB, log zerolog.Logger) *PostgreRepository {
+	return &PostgreRepository{
 		Db:   conn,
 		Logs: log,
 	}
@@ -53,7 +48,7 @@ func ConnectPostgre(ctx context.Context, log zerolog.Logger) *gorm.DB {
 	return db
 }
 
-func (p *postgreRepository) HealthCheck(ctx context.Context) models.DataHealthCheck {
+func (p *PostgreRepository) HealthCheck(ctx context.Context) models.DataHealthCheck {
 	res := models.DataHealthCheck{
 		ServiceName: "PostgreSQL Database",
 		StatusCode:  200,

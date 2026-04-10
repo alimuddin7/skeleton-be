@@ -6,37 +6,16 @@ import (
 	"{{.ProjectName}}/constants"
 	"{{.ProjectName}}/models"
 	
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
-type {{.FeatureName}}Repository interface {
-	Create(ctx context.Context, data *models.{{.FeatureName}}) error
-	Get(ctx context.Context, id int) (*models.{{.FeatureName}}, error)
-	List(ctx context.Context, limit, offset int) ([]models.{{.FeatureName}}, int64, error)
-	Update(ctx context.Context, data *models.{{.FeatureName}}) error
-	Delete(ctx context.Context, id int) error
+func (r *{{.RepoPackage | title}}Repository) Create{{.FeatureName}}(ctx context.Context, data *models.{{.FeatureName}}) error {
+	return r.Db.WithContext(ctx).Create(data).Error
 }
 
-type {{.FeatureNameLower}}Repository struct {
-	db   *gorm.DB
-	logs zerolog.Logger
-}
-
-func New{{.FeatureName}}Repository(db *gorm.DB, logs zerolog.Logger) {{.FeatureName}}Repository {
-	return &{{.FeatureNameLower}}Repository{
-		db:   db,
-		logs: logs,
-	}
-}
-
-func (r *{{.FeatureNameLower}}Repository) Create(ctx context.Context, data *models.{{.FeatureName}}) error {
-	return r.db.WithContext(ctx).Create(data).Error
-}
-
-func (r *{{.FeatureNameLower}}Repository) Get(ctx context.Context, id int) (*models.{{.FeatureName}}, error) {
+func (r *{{.RepoPackage | title}}Repository) Get{{.FeatureName}}(ctx context.Context, id int) (*models.{{.FeatureName}}, error) {
 	var data models.{{.FeatureName}}
-	err := r.db.WithContext(ctx).First(&data, id).Error
+	err := r.Db.WithContext(ctx).First(&data, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, constants.ERR_NOT_FOUND
@@ -46,20 +25,20 @@ func (r *{{.FeatureNameLower}}Repository) Get(ctx context.Context, id int) (*mod
 	return &data, nil
 }
 
-func (r *{{.FeatureNameLower}}Repository) List(ctx context.Context, limit, offset int) ([]models.{{.FeatureName}}, int64, error) {
+func (r *{{.RepoPackage | title}}Repository) List{{.FeatureName}}(ctx context.Context, limit, offset int) ([]models.{{.FeatureName}}, int64, error) {
 	var data []models.{{.FeatureName}}
 	var count int64
 	
-	if err := r.db.WithContext(ctx).Model(&models.{{.FeatureName}}{}).Count(&count).Error; err != nil {
+	if err := r.Db.WithContext(ctx).Model(&models.{{.FeatureName}}{}).Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
 	
-	err := r.db.WithContext(ctx).Limit(limit).Offset(offset).Find(&data).Error
+	err := r.Db.WithContext(ctx).Limit(limit).Offset(offset).Find(&data).Error
 	return data, count, err
 }
 
-func (r *{{.FeatureNameLower}}Repository) Update(ctx context.Context, data *models.{{.FeatureName}}) error {
-	db := r.db.WithContext(ctx).Save(data)
+func (r *{{.RepoPackage | title}}Repository) Update{{.FeatureName}}(ctx context.Context, data *models.{{.FeatureName}}) error {
+	db := r.Db.WithContext(ctx).Save(data)
 	if db.Error != nil {
 		return db.Error
 	}
@@ -69,8 +48,8 @@ func (r *{{.FeatureNameLower}}Repository) Update(ctx context.Context, data *mode
 	return nil
 }
 
-func (r *{{.FeatureNameLower}}Repository) Delete(ctx context.Context, id int) error {
-	db := r.db.WithContext(ctx).Delete(&models.{{.FeatureName}}{}, id)
+func (r *{{.RepoPackage | title}}Repository) Delete{{.FeatureName}}(ctx context.Context, id int) error {
+	db := r.Db.WithContext(ctx).Delete(&models.{{.FeatureName}}{}, id)
 	if db.Error != nil {
 		return db.Error
 	}

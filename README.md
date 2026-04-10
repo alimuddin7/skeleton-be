@@ -33,6 +33,27 @@ go install github.com/alimuddin7/skeleton-be@latest
 
 ---
 
+## 📚 Core Libraries
+This generator leverages industry-standard, high-performance libraries to construct your microservices:
+
+**Generator CLI Stack**:
+- [**Cobra**](https://github.com/spf13/cobra): Powerful CLI application routing.
+- [**Huh**](https://github.com/charmbracelet/huh): Beautiful terminal forms & interactive prompts.
+
+**Generated Application Stack**:
+- **Framework**: [Fiber v3](https://github.com/gofiber/fiber) (Ultra-fast HTTP routing) / Google gRPC
+- **Database (ORM)**: [GORM v2](https://gorm.io/) (PostgreSQL & MySQL drivers)
+- **Logging**: [Zerolog](https://github.com/rs/zerolog) (Zero-allocation JSON logger)
+- **Validation**: [Validator v10](https://github.com/go-playground/validator) (Struct validation)
+- **Messaging/Queue**: 
+  - [NATS JetStream](https://github.com/nats-io/nats.go)
+  - Kafka
+  - [Asynq](https://github.com/hibiken/asynq) (Redis-based tasks)
+- **Caching**: [Go-Redis v9](https://github.com/redis/go-redis)
+- **Storage**: [MinIO go v7](https://github.com/minio/minio-go)
+
+---
+
 ## 🛠 Usage Guide
 
 ### 1. Project Initialization
@@ -44,7 +65,7 @@ skeleton-be init
 
 The wizard covers:
 1. **Project Name** & **Service Code** (Identifier)
-2. **Project Type** (Backend, Scheduler, Worker, Publisher, gRPC) - *Multi-select supported*
+2. **Project Type** (Backend, Scheduler, Worker, Publisher, gRPC) - *You can only select exactly **ONE** service type per project.*
 3. **Database** (MySQL or PostgreSQL)
 4. **Infra Modules** (Redis, Kafka, NATS, etc.)
 5. **Messaging Roles** (Consumer, Publisher, or Both)
@@ -60,17 +81,28 @@ The wizard covers:
 | **Asynq** | Redis-based background processing | Worker / Client |
 | **MinIO** | S3-compatible object storage | Storage |
 
-### 3. Component Generation
+### 3. Compatibility Matrix
+Different Service Types support different architectural targets and CLI commands.
+
+| Service Type (y) \ Modules & CLIs (x) | SQL / Redis / Minio | Message Brokers | Asynq Jobs | `add route` | `add crud` | `add host` | `add module` |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Backend (REST API)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **gRPC Server** | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| **Worker / Consumer** | ✅ | ✅ (Consumer mode) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Publisher** | ✅ | ✅ (Publisher mode) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Scheduler** | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+
+### 4. Component Generation
 Extend your existing project with specialized components:
 
 ```bash
 # Add new infrastructure
 skeleton-be add module kafka
 
-# Generate full CRUD for an entity
-skeleton-be add crud user --db postgresql
+# Generate full CRUD for an entity (Fiber Backend Only)
+skeleton-be add crud user
 
-# Add a simple route/feature stack
+# Add a simple route/feature stack (Fiber Backend Only)
 skeleton-be add route healthcheck
 
 # Integrate an external API

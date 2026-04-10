@@ -14,7 +14,11 @@ func (u *usecase) Create{{.FeatureName}}(ctx context.Context, req *dto.{{.Featur
 	data := models.{{.FeatureName}}{
 		Name: req.Name,
 	}
-	if err := u.{{.FeatureNameLower}}Repo.Create(ctx, &data); err != nil {
+	{{- if eq .RepoPackage "postgre"}}
+	if err := u.Repo.GetPostgre().Create{{.FeatureName}}(ctx, &data); err != nil {
+	{{- else}}
+	if err := u.Repo.GetMysql().Create{{.FeatureName}}(ctx, &data); err != nil {
+	{{- end}}
 		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to create {{.FeatureNameLower}}")
 		return dto.Response[any]{}, err
 	}
@@ -28,7 +32,11 @@ func (u *usecase) Create{{.FeatureName}}(ctx context.Context, req *dto.{{.Featur
 }
 
 func (u *usecase) Get{{.FeatureName}}(ctx context.Context, id int) (dto.Response[dto.{{.FeatureName}}Response], error) {
-	data, err := u.{{.FeatureNameLower}}Repo.Get(ctx, id)
+	{{- if eq .RepoPackage "postgre"}}
+	data, err := u.Repo.GetPostgre().Get{{.FeatureName}}(ctx, id)
+	{{- else}}
+	data, err := u.Repo.GetMysql().Get{{.FeatureName}}(ctx, id)
+	{{- end}}
 	if err != nil {
 		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}}")
 		return dto.Response[dto.{{.FeatureName}}Response]{}, err
@@ -44,7 +52,11 @@ func (u *usecase) Get{{.FeatureName}}(ctx context.Context, id int) (dto.Response
 
 func (u *usecase) List{{.FeatureName}}(ctx context.Context, page, limit int) (dto.Response[[]dto.{{.FeatureName}}Response], error) {
 	offset := (page - 1) * limit
-	data, count, err := u.{{.FeatureNameLower}}Repo.List(ctx, limit, offset)
+	{{- if eq .RepoPackage "postgre"}}
+	data, count, err := u.Repo.GetPostgre().List{{.FeatureName}}(ctx, limit, offset)
+	{{- else}}
+	data, count, err := u.Repo.GetMysql().List{{.FeatureName}}(ctx, limit, offset)
+	{{- end}}
 	if err != nil {
 		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to list {{.FeatureNameLower}}s")
 		return dto.Response[[]dto.{{.FeatureName}}Response]{}, err
@@ -80,7 +92,11 @@ func (u *usecase) List{{.FeatureName}}(ctx context.Context, page, limit int) (dt
 }
 
 func (u *usecase) Update{{.FeatureName}}(ctx context.Context, id int, req *dto.{{.FeatureName}}Request) (dto.Response[any], error) {
-	existing, err := u.{{.FeatureNameLower}}Repo.Get(ctx, id)
+	{{- if eq .RepoPackage "postgre"}}
+	existing, err := u.Repo.GetPostgre().Get{{.FeatureName}}(ctx, id)
+	{{- else}}
+	existing, err := u.Repo.GetMysql().Get{{.FeatureName}}(ctx, id)
+	{{- end}}
 	if err != nil {
 		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to get {{.FeatureNameLower}} for update")
 		return dto.Response[any]{}, err
@@ -90,7 +106,11 @@ func (u *usecase) Update{{.FeatureName}}(ctx context.Context, id int, req *dto.{
 	existing.Name = req.Name
 	// Add more field updates here as needed
 
-	if err := u.{{.FeatureNameLower}}Repo.Update(ctx, existing); err != nil {
+	{{- if eq .RepoPackage "postgre"}}
+	if err := u.Repo.GetPostgre().Update{{.FeatureName}}(ctx, existing); err != nil {
+	{{- else}}
+	if err := u.Repo.GetMysql().Update{{.FeatureName}}(ctx, existing); err != nil {
+	{{- end}}
 		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to update {{.FeatureNameLower}}")
 		return dto.Response[any]{}, err
 	}
@@ -104,7 +124,11 @@ func (u *usecase) Update{{.FeatureName}}(ctx context.Context, id int, req *dto.{
 }
 
 func (u *usecase) Delete{{.FeatureName}}(ctx context.Context, id int) (dto.Response[any], error) {
-	if err := u.{{.FeatureNameLower}}Repo.Delete(ctx, id); err != nil {
+	{{- if eq .RepoPackage "postgre"}}
+	if err := u.Repo.GetPostgre().Delete{{.FeatureName}}(ctx, id); err != nil {
+	{{- else}}
+	if err := u.Repo.GetMysql().Delete{{.FeatureName}}(ctx, id); err != nil {
+	{{- end}}
 		u.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to delete {{.FeatureNameLower}}")
 		return dto.Response[any]{}, err
 	}

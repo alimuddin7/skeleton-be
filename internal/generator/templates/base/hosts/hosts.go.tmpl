@@ -3,40 +3,40 @@ package hosts
 import (
 	"github.com/rs/zerolog"
 	{{range .Hosts}}
-	{{.}} "{{$.ProjectName}}/hosts/{{.}}"
+	{{. | clean}} "{{$.ProjectName}}/hosts/{{.}}"
 	{{end}}
 )
 
 type (
 	host struct {
 		{{range .Hosts}}
-		{{. | title}}Host {{.}}.{{. | title}}
+		{{. | title}}Host {{. | clean}}.{{. | title}}
 		{{end}}
 		Logs zerolog.Logger
 	}
 
 	Host interface {
 		{{range .Hosts}}
-		{{. | title}}() {{.}}.{{. | title}}
+		{{. | title}}() {{. | clean}}.{{. | title}}
 		{{end}}
 	}
 )
 
 {{range .Hosts}}
-func (h *host) {{. | title}}() {{.}}.{{. | title}} {
+func (h *host) {{. | title}}() {{. | clean}}.{{. | title}} {
 	return h.{{. | title}}Host
 }
 {{end}}
 
 func InitializeHost(
 	{{range .Hosts}}
-	{{. | untitle}} {{.}}.{{. | title}},
+	{{. | untitle | clean}} {{. | clean}}.{{. | title}},
 	{{end}}
 	l zerolog.Logger,
 ) Host {
 	return &host{
 		{{range .Hosts}}
-		{{. | title}}Host: {{. | untitle}},
+		{{. | title}}Host: {{. | untitle | clean}},
 		{{end}}
 		Logs: l,
 	}

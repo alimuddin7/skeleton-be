@@ -58,7 +58,7 @@ import (
 	{{- if .Hosts}}
 	"{{.ProjectName}}/hosts"
 	{{- range .Hosts}}
-	{{.}} "{{$.ProjectName}}/hosts/{{.}}"
+	{{. | clean}} "{{$.ProjectName}}/hosts/{{.}}"
 	{{- end}}
 	{{- end}}
 
@@ -151,32 +151,21 @@ func InitializeApp() *App {
 	{{- if .Hosts}}
 	// --- Hosts ---
 	{{- range .Hosts}}
-	{{.}}Host := {{.}}.Initialize{{. | title}}(logger)
+	{{. | clean}}Host := {{. | clean}}.Initialize{{. | title}}(logger)
 	{{- end}}
 	host := hosts.InitializeHost(
 		{{- range .Hosts}}
-		{{.}}Host,
+		{{. | clean}}Host,
 		{{- end}}
 		logger,
 	)
 	{{- end}}
 	// [APP_HOST_INIT_MARKER]
 
-	{{- range .Features}}
-	{{- $dbType := index $.FeatureDBs .}}
-	{{- if or (eq $dbType "postgresql") (eq $dbType "postgres")}}
-	{{.}}Repo := postgre.New{{. | title}}Repository(repo.GetPostgre().GetDB(), logger)
-	{{- else}}
-	{{.}}Repo := mysql.New{{. | title}}Repository(repo.GetMysql().GetDB(), logger)
-	{{- end}}
-	{{- end}}
 	v1Usecase := v1Usecases.InitializeV1Usecase(
 		{{- if .Modules}}repo,{{end}}
 		{{- if .Hosts}}host,{{end}}
 		logger,
-		{{- range .Features}}
-		{{.}}Repo,
-		{{- end}}
 	)
 	// [APP_USECASE_INIT_MARKER]
 

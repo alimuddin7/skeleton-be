@@ -17,7 +17,7 @@ import (
 
 	"{{.ProjectName}}/constants"
 	"{{.ProjectName}}/models/dto"
-	hModels "{{.ProjectName}}/helpers/models"
+	"{{.ProjectName}}/models"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
@@ -62,106 +62,167 @@ func LogRequest(c fiber.Ctx, log zerolog.Logger, start time.Time) {
 
 // --- HTTP Client Section ---
 
-// HTTPRequest performs an HTTP request using the standard library
-func HTTPRequest(ctx context.Context, method, url string, headers map[string]string, body interface{}, timeout time.Duration) ([]byte, int, error) {
-	var reqBody io.Reader
-
-	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to marshal body: %w", err)
-		}
-		reqBody = bytes.NewBuffer(jsonBody)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	
-	if body != nil && req.Header.Get("Content-Type") == "" {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	client := &http.Client{
-		Timeout: timeout,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	return respBody, resp.StatusCode, nil
+// HTTPClient interface for making HTTP requests
+type HTTPClient interface {
+	Do(ctx context.Context, method, url string, headers map[string]string, body interface{}, maxRetry int, retryDelay time.Duration) ([]byte, int, error)
+	DoMultipart(ctx context.Context, method, url string, headers map[string]string, files map[string]string, fields map[string]string, maxRetry int, retryDelay time.Duration) ([]byte, int, error)
 }
 
-// HTTPRequestMultipart performs a multipart HTTP request
-func HTTPRequestMultipart(ctx context.Context, method, url string, headers map[string]string, files map[string]string, fields map[string]string, timeout time.Duration) ([]byte, int, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+type httpClient struct {
+	client *http.Client
+}
 
-	for key, path := range files {
-		file, err := os.Open(path)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to open file %s: %w", path, err)
+// NewHTTPClient creates a new centralized HTTP client with optimal shared settings
+func NewHTTPClient(maxIdleConns, maxIdleConnsPerHost int, idleConnTimeout time.Duration) HTTPClient {
+	return &httpClient{
+		client: &http.Client{
+			Transport: &http.Transport{
+				MaxIdleConns:        maxIdleConns, // Global maximum idle connections across all hosts
+				MaxIdleConnsPerHost: maxIdleConnsPerHost,  // Maximum idle connections per individual host
+				IdleConnTimeout:     idleConnTimeout,
+			},
+			Timeout: 0, // No client-level timeout, rely on Context timeouts per request
+		},
+	}
+}
+
+// Do performs a standard HTTP request with retry logic
+func (h *httpClient) Do(ctx context.Context, method, url string, headers map[string]string, body interface{}, maxRetry int, retryDelay time.Duration) ([]byte, int, error) {
+	var respBody []byte
+	var statusCode int
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetry; attempt++ {
+		var reqBody io.Reader
+		if body != nil {
+			jsonBody, err := json.Marshal(body)
+			if err != nil {
+				return nil, 0, fmt.Errorf("failed to marshal body: %w", err)
+			}
+			reqBody = bytes.NewBuffer(jsonBody)
 		}
-		defer file.Close()
 
-		part, err := writer.CreateFormFile(key, filepath.Base(path))
+		req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to create form file: %w", err)
+			return nil, 0, fmt.Errorf("failed to create request: %w", err)
 		}
-		_, err = io.Copy(part, file)
+
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+
+		if body != nil && req.Header.Get("Content-Type") == "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+
+		resp, err := h.client.Do(req)
+		if err == nil {
+			statusCode = resp.StatusCode
+			respBody, err = io.ReadAll(resp.Body)
+			resp.Body.Close()
+			
+			if err == nil {
+				return respBody, statusCode, nil // Success
+			}
+			lastErr = fmt.Errorf("failed to read response body: %w", err)
+		} else {
+			lastErr = fmt.Errorf("request failed: %w", err)
+		}
+
+		// Retry only if there's an error (network error or body read error)
+		if attempt < maxRetry {
+			select {
+			case <-ctx.Done():
+				return nil, statusCode, ctx.Err()
+			case <-time.After(retryDelay):
+				// Wait and retry
+			}
+		}
+	}
+
+	return nil, statusCode, fmt.Errorf("request failed after %d attempts: %w", maxRetry+1, lastErr)
+}
+
+// DoMultipart performs a multipart HTTP request with retry logic
+func (h *httpClient) DoMultipart(ctx context.Context, method, url string, headers map[string]string, files map[string]string, fields map[string]string, maxRetry int, retryDelay time.Duration) ([]byte, int, error) {
+	var respBody []byte
+	var statusCode int
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetry; attempt++ {
+		reqBody := &bytes.Buffer{}
+		writer := multipart.NewWriter(reqBody)
+
+		var writeErr error
+		for key, path := range files {
+			file, err := os.Open(path)
+			if err != nil {
+				writeErr = fmt.Errorf("failed to open file %s: %w", path, err)
+				break
+			}
+
+			part, err := writer.CreateFormFile(key, filepath.Base(path))
+			if err != nil {
+				file.Close()
+				writeErr = fmt.Errorf("failed to create form file: %w", err)
+				break
+			}
+			_, err = io.Copy(part, file)
+			file.Close()
+			if err != nil {
+				writeErr = fmt.Errorf("failed to copy file content: %w", err)
+				break
+			}
+		}
+
+		if writeErr != nil {
+			return nil, 0, writeErr
+		}
+
+		for key, val := range fields {
+			_ = writer.WriteField(key, val)
+		}
+
+		err := writer.Close()
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to copy file content: %w", err)
+			return nil, 0, fmt.Errorf("failed to close writer: %w", err)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+
+		resp, err := h.client.Do(req)
+		if err == nil {
+			statusCode = resp.StatusCode
+			respBody, err = io.ReadAll(resp.Body)
+			resp.Body.Close()
+
+			if err == nil {
+				return respBody, statusCode, nil // Success
+			}
+			lastErr = fmt.Errorf("failed to read response body: %w", err)
+		} else {
+			lastErr = fmt.Errorf("request failed: %w", err)
+		}
+
+		if attempt < maxRetry {
+			select {
+			case <-ctx.Done():
+				return nil, statusCode, ctx.Err()
+			case <-time.After(retryDelay):
+				// Wait and retry
+			}
 		}
 	}
 
-	for key, val := range fields {
-		_ = writer.WriteField(key, val)
-	}
-
-	err := writer.Close()
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to close writer: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-
-	client := &http.Client{
-		Timeout: timeout,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	return respBody, resp.StatusCode, nil
+	return nil, statusCode, fmt.Errorf("request failed after %d attempts: %w", maxRetry+1, lastErr)
 }
 
 // --- Meta / Error Codes Section ---
@@ -188,7 +249,7 @@ func loadErrorCodes() {
 				continue
 			}
 
-			var tempData []hModels.ErrorCodeElement
+			var tempData []models.ErrorCodeElement
 			if err := json.Unmarshal(data, &tempData); err != nil {
 				continue
 			}

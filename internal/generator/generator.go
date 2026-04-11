@@ -416,7 +416,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 	// Base directories (always created)
 	baseDirs := []string{
 		"cmd", "configs", "constants", "controllers/v1", "usecases/v1",
-		"routers", "models", "models/dto", "errorcodes", "docker", "migrations", "helpers", "helpers/models",
+		"routers", "models", "models/dto", "errorcodes", "docker", "migrations", "helpers",
 		"internal/app",
 		".gitlab", ".gitlab/ci", ".gitlab/script",
 	}
@@ -534,8 +534,8 @@ func getBaseTemplates() map[string]string {
 		"templates/base/main.go.tmpl":                               "main.go",
 		"templates/base/go.mod.tmpl":                                "go.mod",
 		"templates/base/constants/constants.go.tmpl":                "constants/general.go",
-		"templates/base/helpers/models/models.go.tmpl":              "helpers/models/meta.go",
-		"templates/base/helpers/models/log_models.go.tmpl":          "helpers/models/log.go",
+		"templates/base/models/meta.go.tmpl":                        "models/meta.go",
+		"templates/base/models/log.go.tmpl":                         "models/log.go",
 		"templates/base/routers/router.go.tmpl":                     "routers/main.go",
 		"templates/base/helpers/middleware.go.tmpl":                 "helpers/middleware.go",
 		"templates/base/helpers/logger.go.tmpl":                     "helpers/logger.go",

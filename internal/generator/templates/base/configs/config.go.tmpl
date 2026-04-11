@@ -2,14 +2,18 @@ package configs
 
 import (
 	"log"
+	"time"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
 	General struct {
-		ServiceName string `envconfig:"SERVICE_NAME" required:"true"`
-		SecretKey   string `envconfig:"SECRET_KEY" required:"true"`
+		ServiceName         string        `envconfig:"SERVICE_NAME" required:"true"`
+		SecretKey           string        `envconfig:"SECRET_KEY" required:"true"`
+		MaxIdleConns        int           `envconfig:"MAX_IDLE_CONNS" default:"100"`
+		MaxIdleConnsPerHost int           `envconfig:"MAX_IDLE_CONNS_PER_HOST" default:"20"`
+		IdleConnTimeout     time.Duration `envconfig:"IDLE_CONN_TIMEOUT" default:"90s"`
 	}
 	Server struct {
 		Address    string `envconfig:"ROUTER_SERVER_ADDRESS" default:"0.0.0.0"`
@@ -85,9 +89,12 @@ type Hosts struct {
 
 {{- range .Hosts}}
 type {{. | title}}Host struct {
-	Host string `envconfig:"HOST"`
-	Get  string `envconfig:"GET"`
-	Post string `envconfig:"POST"`
+	Host       string        `envconfig:"HOST"`
+	Get        string        `envconfig:"GET"`
+	Post       string        `envconfig:"POST"`
+	Timeout    time.Duration `envconfig:"TIMEOUT"`
+	MaxRetry   int           `envconfig:"MAX_RETRY" default:"3"`
+	RetryDelay time.Duration `envconfig:"RETRY_DELAY" default:"2s"`
 }
 {{- end}}
 

@@ -149,9 +149,16 @@ func InitializeApp() *App {
 	{{- end}}
 
 	{{- if .Hosts}}
+	// --- Shared HTTP Client ---
+	sharedHTTPClient := helpers.NewHTTPClient(
+		configs.Cfg.General.MaxIdleConns,
+		configs.Cfg.General.MaxIdleConnsPerHost,
+		configs.Cfg.General.IdleConnTimeout,
+	)
+
 	// --- Hosts ---
 	{{- range .Hosts}}
-	{{. | clean}}Host := {{. | clean}}.Initialize{{. | title}}(logger)
+	{{. | clean}}Host := {{. | clean}}.Initialize{{. | title | clean}}(logger, sharedHTTPClient)
 	{{- end}}
 	host := hosts.InitializeHost(
 		{{- range .Hosts}}

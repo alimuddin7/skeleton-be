@@ -101,7 +101,26 @@ func Generate(destDir string, cfg Config) error {
 		fmt.Printf("Warning: dependencies synchronization failed: %v\n", err)
 	}
 
+	// Run git init if not already initialized
+	if err := runGitInit(destDir); err != nil {
+		fmt.Printf("Warning: git initialization failed: %v\n", err)
+	}
+
 	return nil
+}
+
+func runGitInit(destDir string) error {
+	// Check if already a git repo
+	if _, err := os.Stat(filepath.Join(destDir, ".git")); err == nil {
+		return nil
+	}
+
+	fmt.Println("Initializing git repository...")
+	cmd := exec.Command("git", "init")
+	cmd.Dir = destDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func runGoModTidy(destDir string) error {

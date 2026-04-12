@@ -42,14 +42,14 @@ func main() {
 	ctx := context.Background()
 	logger.Info().Ctx(ctx).Msg("Finish Initializing")
 
+	{{- if or (has .Modules "nats-consumer") (has .Modules "kafka-consumer") (has .Modules "asynq-consumer")}}
 	{{- if has .Modules "nats-consumer"}}
-	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
+	consumers.InitializeConsumers(ctx, a.Repo, a.NatsConsumer, logger)
+	{{- else if has .Modules "kafka-consumer"}}
+	consumers.InitializeConsumers(ctx, a.Repo, a.KafkaConsumer, logger)
+	{{- else if has .Modules "asynq-consumer"}}
+	consumers.InitializeConsumers(ctx, a.Repo, a.AsynqConsumer, logger)
 	{{- end}}
-	{{- if has .Modules "kafka-consumer"}}
-	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
-	{{- end}}
-	{{- if has .Modules "asynq-consumer"}}
-	consumers.InitializeConsumers(ctx, a.Repo, a.V1Usecase, logger)
 	{{- end}}
 
 	go func() {

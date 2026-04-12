@@ -2,13 +2,15 @@ package consumers
 
 import (
 	"context"
-	{{- if or (has .Modules "nats-consumer") (has .Modules "asynq-consumer")}}
+	{{- if or (has .Modules "nats-consumer") (has .Modules "asynq-consumer") (has .Modules "kafka-consumer")}}
 	"{{.ProjectName}}/configs"
 	{{- end}}
 	"{{.ProjectName}}/repositories"
-	v1Usecases "{{.ProjectName}}/usecases/v1"
 	{{- if has .Modules "nats-consumer"}}
 	natsgo "github.com/nats-io/nats.go/jetstream"
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	"github.com/twmb/franz-go/pkg/kgo"
 	{{- end}}
 	{{- if has .Modules "asynq-consumer"}}
 	"github.com/hibiken/asynq"
@@ -25,8 +27,16 @@ type NatsConsumerConfig struct {
 }
 {{- end}}
 
+{{- if has .Modules "kafka-consumer"}}
+// KafkaConsumerConfig mendefinisikan konfigurasi masing-masing Kafka consumer
+type KafkaConsumerConfig struct {
+	Topic   string
+	Handler func(*kgo.Record) error
+}
+{{- end}}
+
 // InitializeConsumers registers all message consumers for the application
-func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Usecase v1Usecases.Usecase, l zerolog.Logger) {
+func InitializeConsumers(ctx context.Context, repo repositories.Repository, c Consumer, l zerolog.Logger) {
 	l.Info().Ctx(ctx).Msg("Starting consumers...")
 
 	{{- if has .Modules "nats-consumer"}}
@@ -36,7 +46,7 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Us
 		// {
 		// 	  StreamName:  configs.Cfg.Database.Nats.ExampleStream,
 		//	  SubjectName: configs.Cfg.Database.Nats.ExampleConsumer,
-		//	  Handler:     v1Usecase.ExampleNatsHandler,
+		//	  Handler:     c.ConsumeNats,
 		// },
 	}
 	for _, conf := range natsConsumers {
@@ -59,7 +69,33 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Us
 	{{- if has .Modules "kafka-consumer"}}
 	// --- Kafka Consumers ---
 	l.Info().Ctx(ctx).Msg("[Kafka] Starting Kafka consumers...")
-	// TODO: Register Kafka consumers here
+	
+	kafkaConsumers := []KafkaConsumerConfig{
+		// {
+		// 	Topic:   "example-topic",
+		// 	Handler: c.ConsumeKafka,
+		// },
+	}
+
+	for _, conf := range kafkaConsumers {
+		go func(conf KafkaConsumerConfig) {
+			for {
+				// Assuming GetKafka().GetConsumer() returns a *kgo.Client
+				fetches := repo.GetKafka().GetConsumer().PollFetches(ctx)
+				if errs := fetches.Errors(); len(errs) > 0 {
+					l.Error().Ctx(ctx).Msgf("[Kafka] Errors polling fetches for topic %s: %v", conf.Topic, errs)
+				}
+
+				fetches.EachRecord(func(record *kgo.Record) {
+					if record.Topic == conf.Topic {
+						if err := conf.Handler(record); err != nil {
+							l.Error().Ctx(ctx).Err(err).Msgf("[Kafka] Error consuming record from topic %s", conf.Topic)
+						}
+					}
+				})
+			}
+		}(conf)
+	}
 	{{- end}}
 
 	{{- if has .Modules "asynq-consumer"}}
@@ -67,11 +103,10 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, v1Us
 	l.Info().Ctx(ctx).Msg("[Asynq] Starting Asynq workers...")
 	
 	mux := asynq.NewServeMux()
-	c := NewConsumer(l, v1Usecase)
 	
-	// Register handlers. You can register specific methods or a catch-all ProcessTask.
-	// For simplicity, we use the catch-all ProcessTask which handles all task types.
-	mux.HandleFunc("/", func(ctx context.Context, t *asynq.Task) error {
+	// Register handlers.
+	// You can register specific methods for different task types.
+	mux.HandleFunc("example:task", func(ctx context.Context, t *asynq.Task) error {
 		return c.ProcessTask(ctx, t)
 	})
 

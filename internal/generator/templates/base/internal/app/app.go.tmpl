@@ -87,7 +87,7 @@ type App struct {
 	{{- if has .ProjectTypes "gRPC"}}
 	{{- range .Modules}}
 	{{- if eq . "grpc-server"}}
-	GrpcServer *grpcserver.GrpcServer
+	GrpcServer grpcserver.GrpcServer
 	{{- end}}
 	{{- end}}
 	{{- end}}

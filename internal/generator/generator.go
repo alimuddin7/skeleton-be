@@ -353,6 +353,102 @@ func RemoveCRUD(name string) error {
 	return Generate(".", *cfg)
 }
 
+func RemoveModule(module string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	if module == "postgres" {
+		module = "postgresql"
+	}
+
+	found := false
+	var newModules []string
+	for _, m := range cfg.Modules {
+		// Remove the base module and any related sub-modules (e.g. nats-consumer, nats-publisher)
+		if m == module || strings.HasPrefix(m, module+"-") {
+			found = true
+			continue
+		}
+		newModules = append(newModules, m)
+	}
+
+	if !found {
+		return fmt.Errorf("module %s not found", module)
+	}
+
+	cfg.Modules = newModules
+
+	// Save updated state
+	if err := saveProjectState(".", *cfg); err != nil {
+		return err
+	}
+
+	// Regenerate base files to remove references
+	return Generate(".", *cfg)
+}
+
+func RemoveRoute(name string) error {
+	cfg, err := loadProjectState("skeleton.json")
+	if err != nil {
+		return err
+	}
+
+	lowerName := strings.ToLower(name)
+	found := false
+	var newRoutes []string
+	for _, r := range cfg.Routes {
+		if r == lowerName {
+			found = true
+			continue
+		}
+		newRoutes = append(newRoutes, r)
+	}
+
+	if !found {
+		return fmt.Errorf("route %s not found", name)
+	}
+
+	cfg.Routes = newRoutes
+
+	// Remove generated files for the route (controller + usecase + dto)
+	filesToRemove := []string{
+		fmt.Sprintf("controllers/v1/%s.controller.go", lowerName),
+		fmt.Sprintf("usecases/v1/%s.usecase.go", lowerName),
+		fmt.Sprintf("models/dto/%s.go", lowerName),
+	}
+
+	for _, f := range filesToRemove {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("Warning: could not remove file %s: %v\n", f, err)
+		}
+	}
+
+	// Save updated state
+	if err := saveProjectState(".", *cfg); err != nil {
+		return err
+	}
+
+	// Regenerate base files to remove references
+	return Generate(".", *cfg)
+}
+
+func RemoveHelper(name string) error {
+	helperName := strings.ToLower(name)
+	fileName := fmt.Sprintf("helpers/%s.go", helperName)
+
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return fmt.Errorf("helper %s not found", helperName)
+	}
+
+	if err := os.Remove(fileName); err != nil {
+		return fmt.Errorf("failed to remove helper file %s: %w", fileName, err)
+	}
+
+	return nil
+}
+
 func AddHelper(name string) error {
 	_, err := loadProjectState("skeleton.json")
 	if err != nil {

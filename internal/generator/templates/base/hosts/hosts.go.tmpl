@@ -2,42 +2,42 @@ package hosts
 
 import (
 	"github.com/rs/zerolog"
-	{{range .Hosts}}
+	{{- range .Hosts}}
 	{{. | clean}} "{{$.ProjectName}}/hosts/{{.}}"
-	{{end}}
+	{{- end}}
 )
 
 type (
 	host struct {
-		{{range .Hosts}}
+		{{- range .Hosts}}
 		{{. | title}}Host {{. | clean}}.{{. | title}}
-		{{end}}
+		{{- end}}
 		Logs zerolog.Logger
 	}
 
 	Host interface {
-		{{range .Hosts}}
+		{{- range .Hosts}}
 		{{. | title}}() {{. | clean}}.{{. | title}}
-		{{end}}
+		{{- end}}
 	}
 )
 
-{{range .Hosts}}
+{{- range .Hosts}}
 func (h *host) {{. | title}}() {{. | clean}}.{{. | title}} {
 	return h.{{. | title}}Host
 }
-{{end}}
+{{- end}}
 
 func InitializeHost(
-	{{range .Hosts}}
-	{{. | untitle | clean}} {{. | clean}}.{{. | title}},
-	{{end}}
+	{{- range .Hosts}}
+	{{. | untitle}} {{. | clean}}.{{. | title}},
+	{{- end}}
 	l zerolog.Logger,
 ) Host {
 	return &host{
-		{{range .Hosts}}
-		{{. | title}}Host: {{. | untitle | clean}},
-		{{end}}
+		{{- range .Hosts}}
+		{{. | title}}Host: {{. | untitle}},
+		{{- end}}
 		Logs: l,
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"{{.ProjectName}}/configs"
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog"
 )
@@ -58,13 +59,43 @@ func (r *asynqRepository) GetServer() *asynq.Server {
 }
 
 func (r *asynqRepository) Publish(ctx context.Context, taskType string, payload []byte, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	start := time.Now()
+	msgID := uuid.New().String()
+
+	// Add tracing metadata via task options
+	opts = append(opts,
+		asynq.TaskID(msgID),
+	)
+
 	task := asynq.NewTask(taskType, payload)
 	info, err := r.client.Enqueue(task, opts...)
+
+	defer func() {
+		logEvent := r.logs.Info().
+			Str("task_type", taskType).
+			Str("message_id", msgID).
+			Str("app_id", configs.Cfg.General.ServiceName).
+			Dur("duration", time.Since(start))
+
+		if err != nil {
+			logEvent.Err(err).Msg("PUBLISH ASYNQ FAILED")
+		} else {
+			logEvent.
+				Str("task_id", info.ID).
+				Str("queue", info.Queue).
+				Int("max_retry", info.MaxRetry).
+				Msg("PUBLISH ASYNQ")
+		}
+	}()
+
 	if err != nil {
-		r.logs.Error().Ctx(ctx).Err(err).Str("type", taskType).Msg("Failed to enqueue asynq task")
+		r.logs.Error().Ctx(ctx).Err(err).
+			Str("task_type", taskType).
+			Str("message_id", msgID).
+			Msg("Failed to enqueue asynq task")
 		return nil, err
 	}
-	r.logs.Info().Ctx(ctx).Str("type", taskType).Str("id", info.ID).Msg("Asynq task enqueued")
+
 	return info, nil
 }
 
@@ -77,3 +108,4 @@ func (r *asynqRepository) PublishAt(ctx context.Context, taskType string, payloa
 	opts = append(opts, asynq.ProcessAt(processAt))
 	return r.Publish(ctx, taskType, payload, opts...)
 }
+

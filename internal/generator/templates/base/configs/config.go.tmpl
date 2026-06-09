@@ -48,6 +48,7 @@ type Config struct {
 			Password        string   `envconfig:"NATS_PASSWORD"`
 			ExampleStream   string   `envconfig:"NATS_EXAMPLE_STREAM" default:"EXAMPLE_STREAM"`
 			ExampleConsumer string   `envconfig:"NATS_EXAMPLE_CONSUMER" default:"EXAMPLE_CONSUMER"`
+			ExampleSubject  string 	 `envconfig:"NATS_EXAMPLE_SUBJECT" default:"EXAMPLE_CONSUMER"`
 		}
 		{{- end}}
 		{{- if eq . "asynq"}}

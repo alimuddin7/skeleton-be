@@ -1,0 +1,34 @@
+{{- if has .Modules "kafka"}}
+package usecases
+
+import (
+	"context"
+
+	"{{.ProjectName}}/constants"
+
+	"github.com/twmb/franz-go/pkg/kgo"
+)
+
+func (u *usecase) PublishKafka(ctx context.Context, topic string, key, value []byte, headers []kgo.RecordHeader) error {
+	if headers == nil {
+		headers = []kgo.RecordHeader{}
+	}
+
+	if trxId := ctx.Value(constants.TRANSACTION_ID); trxId != nil {
+		headers = append(headers, kgo.RecordHeader{
+			Key:   constants.TRANSACTION_ID,
+			Value: []byte(ctx.Value(constants.TRANSACTION_ID).(string)),
+		})
+	}
+
+	if traceId := ctx.Value(constants.TRANSACTION_ID); traceId != nil {
+		headers = append(headers, kgo.RecordHeader{
+			Key:   constants.TRACE_ID,
+			Value: []byte(traceId.(string)),
+		})
+	}
+
+	_, err := u.Repo.GetKafka().Publish(ctx, topic, key, value, headers)
+	return err
+}
+{{- end}}

@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	{{.HostNameLower | clean}} struct {
+	{{.HostNameTitle | untitle}} struct {
 		Host          string
 		EndpointGet   string
 		EndpointPost  string
@@ -23,15 +23,15 @@ type (
 		RetryDelay    time.Duration
 	}
 
-	{{.HostNameTitle | clean}} interface {
+	{{.HostNameTitle}} interface {
 		HealthCheck(ctx context.Context) models.DataHealthCheck
 	}
 )
 
-func Initialize{{.HostNameTitle | clean}}(log zerolog.Logger, client helpers.HTTPClient) {{.HostNameTitle | clean}} {
-	conf := configs.Cfg.Hosts.{{.HostNameTitle | clean}}
+func Initialize{{.HostNameTitle}}(log zerolog.Logger, client helpers.HTTPClient) {{.HostNameTitle}} {
+	conf := configs.Cfg.Hosts.{{.HostNameTitle}}
 
-	h := {{.HostNameLower | clean}}{
+	h := {{.HostNameTitle | untitle}}{
 		Host:         conf.Host,
 		EndpointGet:  conf.Get,
 		EndpointPost: conf.Post,
@@ -53,10 +53,10 @@ func Initialize{{.HostNameTitle | clean}}(log zerolog.Logger, client helpers.HTT
 	return &h
 }
 
-func (h *{{.HostNameLower | clean}}) HealthCheck(ctx context.Context) models.DataHealthCheck {
+func (h *{{.HostNameTitle | untitle}}) HealthCheck(ctx context.Context) models.DataHealthCheck {
 	urlSvr := helpers.TelnetIP(h.Host)
 	res := models.DataHealthCheck{
-		ServiceName: "{{.HostNameTitle | clean}} (" + urlSvr + ")",
+		ServiceName: "{{.HostNameTitle}} (" + urlSvr + ")",
 		StatusCode:  200,
 	}
 

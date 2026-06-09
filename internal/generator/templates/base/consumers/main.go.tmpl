@@ -46,7 +46,7 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, c Co
 		// {
 		// 	  StreamName:  configs.Cfg.Database.Nats.ExampleStream,
 		//	  SubjectName: configs.Cfg.Database.Nats.ExampleConsumer,
-		//	  Handler:     c.ConsumeNats,
+		//	  Handler:     c.V1().ExampleConsumeNats,
 		// },
 	}
 	for _, conf := range natsConsumers {
@@ -73,7 +73,7 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, c Co
 	kafkaConsumers := []KafkaConsumerConfig{
 		// {
 		// 	Topic:   "example-topic",
-		// 	Handler: c.ConsumeKafka,
+		// 	Handler: c.V1().ExampleConsumeKafka,
 		// },
 	}
 
@@ -105,9 +105,8 @@ func InitializeConsumers(ctx context.Context, repo repositories.Repository, c Co
 	mux := asynq.NewServeMux()
 	
 	// Register handlers.
-	// You can register specific methods for different task types.
 	mux.HandleFunc("example:task", func(ctx context.Context, t *asynq.Task) error {
-		return c.ProcessTask(ctx, t)
+		return c.V1().ExampleProcessTask(ctx, t)
 	})
 
 	go func() {

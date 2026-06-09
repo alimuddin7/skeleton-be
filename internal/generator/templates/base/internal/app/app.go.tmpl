@@ -47,12 +47,15 @@ import (
 
 	{{- if has .Modules "nats-consumer"}}
 	"{{.ProjectName}}/consumers"
+	v1Consumers "{{.ProjectName}}/consumers/v1"
 	{{- end}}
 	{{- if has .Modules "kafka-consumer"}}
 	"{{.ProjectName}}/consumers"
+	v1Consumers "{{.ProjectName}}/consumers/v1"
 	{{- end}}
 	{{- if has .Modules "asynq-consumer"}}
 	"{{.ProjectName}}/consumers"
+	v1Consumers "{{.ProjectName}}/consumers/v1"
 	{{- end}}
 
 	{{- if .Hosts}}
@@ -158,7 +161,7 @@ func InitializeApp() *App {
 
 	// --- Hosts ---
 	{{- range .Hosts}}
-	{{. | clean}}Host := {{. | clean}}.Initialize{{. | title | clean}}(logger, sharedHTTPClient)
+	{{. | clean}}Host := {{. | clean}}.Initialize{{. | title}}(logger, sharedHTTPClient)
 	{{- end}}
 	host := hosts.InitializeHost(
 		{{- range .Hosts}}
@@ -177,16 +180,8 @@ func InitializeApp() *App {
 	// [APP_USECASE_INIT_MARKER]
 
 	{{- if or (has .Modules "nats-consumer") (has .Modules "kafka-consumer") (has .Modules "asynq-consumer")}}
-	var consumer consumers.Consumer
-	{{- if has .Modules "nats-consumer"}}
-	consumer = consumers.NewConsumer(logger, v1Usecase)
-	{{- end}}
-	{{- if has .Modules "kafka-consumer"}}
-	consumer = consumers.NewConsumer(logger, v1Usecase)
-	{{- end}}
-	{{- if has .Modules "asynq-consumer"}}
-	consumer = consumers.NewConsumer(logger, v1Usecase)
-	{{- end}}
+	v1Cons := v1Consumers.InitializeV1Consumer(v1Usecase, logger)
+	consumer := consumers.InitializeConsumer(v1Cons, logger)
 	{{- end}}
 
 	// --- Controllers ---

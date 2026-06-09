@@ -380,6 +380,43 @@ func RemoveModule(module string) error {
 
 	cfg.Modules = newModules
 
+	// Delete repository source folder/files for this module
+	repoDirs := map[string]string{
+		"mysql":         "repositories/mysql",
+		"postgresql":    "repositories/postgre",
+		"redis":         "repositories/redis",
+		"kafka":         "repositories/kafka",
+		"nats":          "repositories/nats",
+		"asynq":         "repositories/asynq",
+		"minio":         "repositories/minio",
+		"redis-cluster": "repositories/redis_cluster",
+		"grpc-server":   "grpc/server",
+		"grpc-client":   "grpc/client",
+	}
+
+	if dir, ok := repoDirs[module]; ok {
+		if err := os.RemoveAll(dir); err != nil {
+			fmt.Printf("Warning: failed to delete module repository directory %s: %v\n", dir, err)
+		}
+	}
+
+	// If removing a messaging module, clean up consumers folder if consumers are being removed
+	if module == "nats" || module == "kafka" || module == "asynq" {
+		// Check if any other consumer modules remain
+		hasOtherConsumer := false
+		for _, m := range cfg.Modules {
+			if strings.HasSuffix(m, "-consumer") {
+				hasOtherConsumer = true
+				break
+			}
+		}
+		if !hasOtherConsumer {
+			if err := os.RemoveAll("consumers"); err != nil {
+				fmt.Printf("Warning: failed to delete consumers folder: %v\n", err)
+			}
+		}
+	}
+
 	// Save updated state
 	if err := saveProjectState(".", *cfg); err != nil {
 		return err
@@ -538,7 +575,7 @@ func createDirectoryStructure(destDir string, cfg Config) error {
 
 	// Only create consumers dir if there is at least one *-consumer module
 	if hasConsumerModule(cfg) {
-		baseDirs = append(baseDirs, "consumers")
+		baseDirs = append(baseDirs, "consumers", "consumers/v1")
 	}
 
 	for _, dir := range baseDirs {
@@ -676,6 +713,7 @@ func getBaseTemplates() map[string]string {
 		"templates/base/errorcodes/errorcodes.json.tmpl":            "errorcodes.json",
 		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
 		"templates/base/models/dto/response.go.tmpl":                "models/dto/response.go",
+		"templates/base/models/dto/consumer.go.tmpl":                "models/dto/consumer.go",
 		"templates/base/models/dto/healthcheck.go.tmpl":             "models/healthcheck.go",
 		"templates/base/internal/app/app.go.tmpl":                   "internal/app/app.go",
 	}
@@ -739,6 +777,20 @@ func appendModuleTemplates(cfg Config, templates map[string]string) {
 	if hasConsumerModule(cfg) {
 		templates["templates/base/consumers/main.go.tmpl"] = "consumers/main.go"
 		templates["templates/base/consumers/consumer.go.tmpl"] = "consumers/consumer.go"
+		templates["templates/base/consumers/v1/v1_consumer.go.tmpl"] = "consumers/v1/v1.consumer.go"
+		templates["templates/base/consumers/v1/example.consumer.go.tmpl"] = "consumers/v1/example.consumer.go"
+	}
+
+	// Add per-MQ usecase templates
+	for _, mod := range cfg.Modules {
+		switch mod {
+		case "nats":
+			templates["templates/base/usecases/v1/nats.go.tmpl"] = "usecases/v1/nats.go"
+		case "kafka":
+			templates["templates/base/usecases/v1/kafka.go.tmpl"] = "usecases/v1/kafka.go"
+		case "asynq":
+			templates["templates/base/usecases/v1/asynq.go.tmpl"] = "usecases/v1/asynq.go"
+		}
 	}
 }
 

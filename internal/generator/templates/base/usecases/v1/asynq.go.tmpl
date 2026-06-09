@@ -1,0 +1,14 @@
+{{- if has .Modules "asynq"}}
+package usecases
+
+import (
+	"context"
+
+	"github.com/hibiken/asynq"
+)
+
+func (u *usecase) PublishAsynq(ctx context.Context, taskType string, payload []byte, opts ...asynq.Option) error {
+	_, err := u.Repo.GetAsynq().Publish(ctx, taskType, payload, opts...)
+	return err
+}
+{{- end}}

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/rs/zerolog"
@@ -63,16 +64,43 @@ func (n *natsRepository) GetJS() jetstream.JetStream {
 }
 
 func (n *natsRepository) Publish(ctx context.Context, stream, subject string, ttl time.Duration, header nats.Header, data []byte) (*jetstream.PubAck, error) {
-	// Auto create stream using subject as stream name if it doesn't exist
-	_, err := n.CreateStream(ctx, stream, []string{subject}, ttl)
-	if err != nil {
-		n.Logs.Warn().Ctx(ctx).Err(err).Str("stream", stream).Msg("Failed to auto-create stream during Publish (might already exist or subject/stream mismatch)")
+	start := time.Now()
+
+	defer func() {
+		n.Logs.Info().
+			Str("stream", stream).
+			Str("subject", subject).
+			Dur("duration", time.Since(start)).
+			Msg("PUBLISH NATS")
+	}()
+
+	// Add default headers if not present
+	if header.Get("Nats-Msg-Id") == "" {
+		header.Set("Nats-Msg-Id", uuid.New().String())
 	}
-	return n.JS.PublishMsg(ctx, &nats.Msg{
+	header.Set("Timestamp", time.Now().UTC().Format(time.RFC3339Nano))
+	header.Set("X-App-Id", configs.Cfg.General.ServiceName)
+
+	msg := &nats.Msg{
 		Subject: subject,
-		Header:  header,
 		Data:    data,
-	})
+		Header:  header,
+	}
+
+	ack, err := n.JS.PublishMsg(ctx, msg)
+	if err != nil && (strings.Contains(err.Error(), "stream not found") || strings.Contains(err.Error(), "no response")) {
+		n.Logs.Warn().Err(err).Str("stream", stream).Msg("Stream not found or no response, attempting to lazy create...")
+		subjects := []string{
+			configs.Cfg.Database.Nats.ExampleSubject,
+		}
+		_, errCreate := n.CreateStream(ctx, stream, subjects, ttl)
+		if errCreate == nil {
+			return n.JS.PublishMsg(ctx, msg)
+		}
+		return nil, errCreate
+	}
+
+	return ack, err
 }
 
 func (n *natsRepository) Consume(ctx context.Context, stream, subject, consumerName string, ttl time.Duration, handler jetstream.MessageHandler) (jetstream.ConsumeContext, error) {

@@ -1,0 +1,87 @@
+package v1
+
+import (
+	"context"
+	{{- if has .Modules "nats-consumer"}}
+	"time"
+	{{- end}}
+	v1Usecases "{{.ProjectName}}/usecases/v1"
+
+	{{- if has .Modules "nats-consumer"}}
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	"github.com/twmb/franz-go/pkg/kgo"
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	"github.com/hibiken/asynq"
+	{{- end}}
+	"github.com/rs/zerolog"
+)
+
+type V1Consumer interface {
+	{{- if has .Modules "nats-consumer"}}
+	ExampleConsumeNats(msg jetstream.Msg)
+	PublishDeadLetter(ctx context.Context, stream, subject string, ttl time.Duration, header nats.Header, data []byte)
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	ExampleConsumeKafka(record *kgo.Record) error
+	PublishDeadLetterKafka(ctx context.Context, topic string, key, value []byte, headers []kgo.RecordHeader)
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	ExampleProcessTask(ctx context.Context, t *asynq.Task) error
+	PublishDeadLetterAsynq(ctx context.Context, taskType string, payload []byte)
+	{{- end}}
+}
+
+type consumer struct {
+	Usecase v1Usecases.Usecase
+	Logs    zerolog.Logger
+}
+
+func InitializeV1Consumer(
+	usecases v1Usecases.Usecase,
+	l zerolog.Logger,
+) V1Consumer {
+	return &consumer{
+		Usecase: usecases,
+		Logs:    l,
+	}
+}
+
+{{- if has .Modules "nats-consumer"}}
+
+func (c *consumer) PublishDeadLetter(ctx context.Context, stream, subject string, ttl time.Duration, header nats.Header, data []byte) {
+	err := c.Usecase.PublishNats(ctx, stream, subject, ttl, header, data)
+	if err != nil {
+		c.Logs.Error().Ctx(ctx).Err(err).Msgf("Failed to send message to dead letter queue (Stream: %s, Subject: %s)", stream, subject)
+	} else {
+		c.Logs.Info().Ctx(ctx).Msgf("Successfully sent message to dead letter queue (Stream: %s, Subject: %s)", stream, subject)
+	}
+}
+{{- end}}
+
+{{- if has .Modules "kafka-consumer"}}
+
+func (c *consumer) PublishDeadLetterKafka(ctx context.Context, topic string, key, value []byte, headers []kgo.RecordHeader) {
+	err := c.Usecase.PublishKafka(ctx, topic, key, value, headers)
+	if err != nil {
+		c.Logs.Error().Ctx(ctx).Err(err).Msgf("Failed to send message to dead letter queue (Topic: %s)", topic)
+	} else {
+		c.Logs.Info().Ctx(ctx).Msgf("Successfully sent message to dead letter queue (Topic: %s)", topic)
+	}
+}
+{{- end}}
+
+{{- if has .Modules "asynq-consumer"}}
+
+func (c *consumer) PublishDeadLetterAsynq(ctx context.Context, taskType string, payload []byte) {
+	err := c.Usecase.PublishAsynq(ctx, taskType, payload)
+	if err != nil {
+		c.Logs.Error().Ctx(ctx).Err(err).Msgf("Failed to send message to dead letter queue (TaskType: %s)", taskType)
+	} else {
+		c.Logs.Info().Ctx(ctx).Msgf("Successfully sent message to dead letter queue (TaskType: %s)", taskType)
+	}
+}
+{{- end}}

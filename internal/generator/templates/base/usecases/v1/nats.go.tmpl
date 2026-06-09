@@ -1,0 +1,27 @@
+{{- if has .Modules "nats"}}
+package usecases
+
+import (
+	"context"
+	"time"
+
+	"{{.ProjectName}}/constants"
+
+	"github.com/nats-io/nats.go"
+)
+
+func (u *usecase) PublishNats(ctx context.Context, stream, subject string, ttl time.Duration, header nats.Header, data []byte) error {
+	if header == nil {
+		header = nats.Header{}
+	}
+
+	if trxId := ctx.Value(constants.TRANSACTION_ID); trxId != nil {
+		header.Add(constants.TRANSACTION_ID, ctx.Value(constants.TRANSACTION_ID).(string))
+	}
+
+	header.Add(constants.TRACE_ID, ctx.Value(constants.TRANSACTION_ID).(string))
+
+	_, err := u.Repo.GetNats().Publish(ctx, stream, subject, ttl, header, data)
+	return err
+}
+{{- end}}

@@ -1,0 +1,119 @@
+package v1
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"{{.ProjectName}}/constants"
+	"{{.ProjectName}}/models/dto"
+
+	{{- if has .Modules "nats-consumer"}}
+	"github.com/nats-io/nats.go/jetstream"
+	{{- end}}
+	{{- if has .Modules "kafka-consumer"}}
+	"github.com/twmb/franz-go/pkg/kgo"
+	{{- end}}
+	{{- if has .Modules "asynq-consumer"}}
+	"github.com/hibiken/asynq"
+	{{- end}}
+)
+
+{{- if has .Modules "nats-consumer"}}
+
+func (c *consumer) ExampleConsumeNats(msg jetstream.Msg) {
+	traceID := msg.Headers().Get(constants.TRACE_ID)
+	if traceID == "" {
+		traceID = "unknown-" + fmt.Sprint(time.Now().UnixNano())
+	}
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, constants.TRANSACTION_ID, traceID)
+
+	c.Logs.Info().
+		Ctx(ctx).
+		Interface("data", json.RawMessage(msg.Data())).
+		Msg("Received MSG Example Consume via JetStream")
+
+	var payload dto.ExamplePayloadConsumer
+	err := json.Unmarshal(msg.Data(), &payload)
+	if err != nil {
+		c.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to unmarshal payload. Throw dead letter")
+		_ = msg.Ack()
+		return
+	}
+
+	err = c.Usecase.ExampleConsumerUsecase(ctx, payload)
+	if err != nil {
+		c.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to process message")
+
+		metadata, _ := msg.Metadata()
+		if metadata.NumDelivered >= 3 {
+			c.Logs.Info().Ctx(ctx).Msg("Max retry reached. Can't retry again")
+			_ = msg.Ack()
+			return
+		}
+
+		_ = msg.Nak()
+		return
+	}
+
+	_ = msg.Ack()
+}
+{{- end}}
+
+{{- if has .Modules "kafka-consumer"}}
+
+func (c *consumer) ExampleConsumeKafka(record *kgo.Record) error {
+	var traceID string
+	for _, header := range record.Headers {
+		if header.Key == constants.TRACE_ID {
+			traceID = string(header.Value)
+			break
+		}
+	}
+	if traceID == "" {
+		traceID = "unknown-" + fmt.Sprint(time.Now().UnixNano())
+	}
+	ctx := context.WithValue(context.Background(), constants.TRANSACTION_ID, traceID)
+	c.Logs.Info().
+		Ctx(ctx).
+		Interface("data", json.RawMessage(record.Value)).
+		Msg("Received MSG Example Consume via Kafka")
+
+	var payload dto.ExamplePayloadConsumer
+	err := json.Unmarshal(record.Value, &payload)
+	if err != nil {
+		c.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to unmarshal payload")
+		return err
+	}
+
+	return c.Usecase.ExampleConsumerUsecase(ctx, payload)
+}
+{{- end}}
+
+{{- if has .Modules "asynq-consumer"}}
+
+func (c *consumer) ExampleProcessTask(ctx context.Context, t *asynq.Task) error {
+	traceID := "unknown-" + fmt.Sprint(time.Now().UnixNano())
+	ctx = context.WithValue(ctx, constants.TRANSACTION_ID, traceID)
+	c.Logs.Info().
+		Ctx(ctx).
+		Interface("data", json.RawMessage(t.Payload())).
+		Msg("Received MSG Example Consume via Asynq")
+
+	switch t.Type() {
+	case "example:task":
+		var payload dto.ExamplePayloadConsumer
+		err := json.Unmarshal(t.Payload(), &payload)
+		if err != nil {
+			c.Logs.Error().Ctx(ctx).Err(err).Msg("Failed to unmarshal payload")
+			return err
+		}
+		return c.Usecase.ExampleConsumerUsecase(ctx, payload)
+	default:
+		c.Logs.Warn().Ctx(ctx).Str("type", t.Type()).Msg("[Asynq] Unknown task type")
+		return nil
+	}
+}
+{{- end}}

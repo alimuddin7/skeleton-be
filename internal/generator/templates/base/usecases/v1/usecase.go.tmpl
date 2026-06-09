@@ -2,9 +2,19 @@ package usecases
 
 import (
 	"context"
+	{{- if has .Modules "nats"}}
+	"time"
+	{{- end}}
 	"github.com/rs/zerolog"
 	{{- if has .Modules "nats"}}
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	{{- end}}
+	{{- if has .Modules "kafka"}}
+	"github.com/twmb/franz-go/pkg/kgo"
+	{{- end}}
+	{{- if has .Modules "asynq"}}
+	"github.com/hibiken/asynq"
 	{{- end}}
 	"{{.ProjectName}}/models"
 	"{{.ProjectName}}/models/dto"
@@ -20,6 +30,7 @@ import (
 
 type Usecase interface {
 	HealthCheck(ctx context.Context) (dto.Response[[]models.DataHealthCheck], error)
+	ExampleConsumerUsecase(ctx context.Context, payload any) error
 	{{- range .Routes}}
 	{{. | title}}(ctx context.Context) (dto.Response[any], error)
 	{{- end}}
@@ -33,6 +44,13 @@ type Usecase interface {
 	// [V1_USECASE_INTERFACE_MARKER]
 	{{- if has .Modules "nats"}}
 	ExampleNatsHandler(msg jetstream.Msg)
+	PublishNats(ctx context.Context, stream, subject string, ttl time.Duration, header nats.Header, data []byte) error
+	{{- end}}
+	{{- if has .Modules "kafka"}}
+	PublishKafka(ctx context.Context, topic string, key, value []byte, headers []kgo.RecordHeader) error
+	{{- end}}
+	{{- if has .Modules "asynq"}}
+	PublishAsynq(ctx context.Context, taskType string, payload []byte, opts ...asynq.Option) error
 	{{- end}}
 }
 
@@ -96,6 +114,11 @@ func (u *usecase) HealthCheck(ctx context.Context) (dto.Response[[]models.DataHe
 	{{- end}}
 	
 	return helpers.GenerateResponseHealthCheck(healthChecks...), nil
+}
+
+func (u *usecase) ExampleConsumerUsecase(ctx context.Context, payload any) error {
+	u.Logs.Info().Msg("ExampleConsumerUsecase called")
+	return nil
 }
 
 {{- if has .Modules "nats"}}

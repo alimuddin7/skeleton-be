@@ -2,20 +2,27 @@ package kafka
 
 import (
 	"context"
+	"time"
+
 	"{{.ProjectName}}/configs"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type (
-	KafkaRepository struct {
+	kafkaRepository struct {
 		Client *kgo.Client
 		Logs   zerolog.Logger
 	}
+	KafkaRepository interface {
+		GetClient() *kgo.Client
+		Publish(ctx context.Context, topic string, key, value []byte, headers []kgo.RecordHeader) (*kgo.Record, error)
+	}
 )
 
-func InitializeKafkaRepository(client *kgo.Client, log zerolog.Logger) *KafkaRepository {
-	return &KafkaRepository{
+func InitializeKafkaRepository(client *kgo.Client, log zerolog.Logger) KafkaRepository {
+	return &kafkaRepository{
 		Client: client,
 		Logs:   log,
 	}
@@ -48,7 +55,56 @@ func ConnectKafka(ctx context.Context, log zerolog.Logger) *kgo.Client {
 	return client
 }
 
-func (k *KafkaRepository) GetClient() *kgo.Client {
+func (k *kafkaRepository) GetClient() *kgo.Client {
 	return k.Client
+}
+
+func (k *kafkaRepository) Publish(ctx context.Context, topic string, key, value []byte, headers []kgo.RecordHeader) (*kgo.Record, error) {
+	start := time.Now()
+
+	// Add default headers
+	msgID := uuid.New().String()
+	headers = append(headers,
+		kgo.RecordHeader{Key: "X-Message-Id", Value: []byte(msgID)},
+		kgo.RecordHeader{Key: "Timestamp", Value: []byte(time.Now().UTC().Format(time.RFC3339Nano))},
+		kgo.RecordHeader{Key: "X-App-Id", Value: []byte(configs.Cfg.General.ServiceName)},
+	)
+
+	record := &kgo.Record{
+		Topic:   topic,
+		Key:     key,
+		Value:   value,
+		Headers: headers,
+	}
+
+	// ProduceSync returns a slice of results; we produce a single record
+	results := k.Client.ProduceSync(ctx, record)
+	result := results[0]
+
+	defer func() {
+		logEvent := k.Logs.Info().
+			Str("topic", topic).
+			Str("message_id", msgID).
+			Dur("duration", time.Since(start))
+
+		if result.Err != nil {
+			logEvent.Err(result.Err).Msg("PUBLISH KAFKA FAILED")
+		} else {
+			logEvent.
+				Int32("partition", result.Record.Partition).
+				Int64("offset", result.Record.Offset).
+				Msg("PUBLISH KAFKA")
+		}
+	}()
+
+	if result.Err != nil {
+		k.Logs.Error().Ctx(ctx).Err(result.Err).
+			Str("topic", topic).
+			Str("message_id", msgID).
+			Msg("Failed to produce kafka message")
+		return nil, result.Err
+	}
+
+	return result.Record, nil
 }
 

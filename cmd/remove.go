@@ -35,8 +35,8 @@ var removeModuleCmd = &cobra.Command{
 For messaging brokers, this also removes related consumer/publisher sub-modules.
 
 Example:
-  skeleton-be remove module redis
-  skeleton-be remove module nats`,
+  skeleton-svc remove module redis
+  skeleton-svc remove module nats`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -55,7 +55,7 @@ var removeRouteCmd = &cobra.Command{
 	Long: `Remove a non-CRUD feature route and its generated files (controller, usecase, dto).
 
 Example:
-  skeleton-be remove route healthcheck`,
+  skeleton-svc remove route healthcheck`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -74,7 +74,7 @@ var removeHelperCmd = &cobra.Command{
 	Long: `Remove a helper function file from the helpers/ directory.
 
 Example:
-  skeleton-be remove helper password-hash`,
+  skeleton-svc remove helper password-hash`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -94,4 +94,3 @@ func init() {
 	removeCmd.AddCommand(removeCrudCmd)
 	removeCmd.AddCommand(removeHelperCmd)
 }
-

@@ -5,9 +5,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "skeleton-be",
+	Use:   "skeleton-svc",
 	Short: "Interactive boilerplate generator for Fiber v3 microservices",
-	Long: `Skeleton-BE is a powerful CLI tool designed to scaffold production-ready Go microservices.
+	Long: `skeleton-svc is a powerful CLI tool designed to scaffold production-ready Go microservices.
 It follows Clean Architecture principles and integrates best-in-class libraries like Fiber v3, GORM v2, and Zerolog.
 
 Features:
@@ -18,12 +18,12 @@ Features:
 - Docker and GitLab CI/CD integration
 
 Usage Examples:
-  skeleton-be init                         # Launch interactive wizard
-  skeleton-be add module redis             # Add Redis standalone
-  skeleton-be add module nats              # Add NATS with role selection
-  skeleton-be add crud product             # Generate full CRUD for product entity
-  skeleton-be add route health             # Generate a simple healthcheck route
-  skeleton-be add host user-api            # Scaffold an external API client`,
+  skeleton-svc init                         # Launch interactive wizard
+  skeleton-svc add module redis             # Add Redis standalone
+  skeleton-svc add module nats              # Add NATS with role selection
+  skeleton-svc add crud product             # Generate full CRUD for product entity
+  skeleton-svc add route health             # Generate a simple healthcheck route
+  skeleton-svc add host user-api            # Scaffold an external API client`,
 }
 
 // Root exposes rootCmd so main.go can pass it to fang.Execute.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/alimuddin7/skeleton-be/cmd"
+	"andromeda.ottopay.id/pt-rtsm-ottopay/skeleton-svc/cmd"
 	"github.com/charmbracelet/fang"
 )
 

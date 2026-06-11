@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alimuddin7/skeleton-be/internal/generator"
+	"andromeda.ottopay.id/pt-rtsm-ottopay/skeleton-svc/internal/generator"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )

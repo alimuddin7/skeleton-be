@@ -209,7 +209,7 @@ Setelah wizard selesai, generator akan:
 ### Install via Go
 
 ```bash
-go install github.com/alimuddin7/skeleton-be@latest
+go install andromeda.ottopay.id/pt-rtsm-ottopay/skeleton-svc@latest
 ```
 
 Binary akan otomatis tersedia di `$GOPATH/bin`. Pastikan `$GOPATH/bin` sudah ada di `$PATH`:

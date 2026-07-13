@@ -1,0 +1,18 @@
+# Project Workspace Agent Rules
+
+This workspace defines agent instructions and design boundaries for developing in this generated Go microservice project.
+
+## Architectural Boundaries
+
+This project follows Clean Architecture. Do NOT bypass layering or write ad-hoc queries outside the designated structures:
+
+1. **Controllers (Fiber handlers)**: Expose endpoints in `controllers/v1/`. Do NOT write database logic, transaction flows, or heavy validations here. Delegate immediately to Usecases.
+2. **Usecases (Business Logic)**: Express business logic inside `usecases/v1/`. Must be database-agnostic. Interact with interfaces (e.g. `repositories.Repository`).
+3. **Repositories (Infrastructure)**: Implement actual SQL, GORM query logic, Redis commands, or message queue pushes inside `repositories/`.
+
+## Dependency Wiring
+
+All packages are wired up in `internal/app/app.go`. When adding a new domain component:
+- Create DTOs, Model, Repository, Usecase, and Controller.
+- Register endpoints in `routers/main.go`.
+- Wire up the repository, usecase, and controller in `internal/app/app.go`.

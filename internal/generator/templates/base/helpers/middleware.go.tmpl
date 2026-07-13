@@ -52,6 +52,7 @@ func LoggingMiddleware(log zerolog.Logger) fiber.Handler {
 			Str("method", c.Method()).
 			Str("path", c.Path()).
 			Any("requestHeader", reqHeader).
+			RawJSON("requestBody", minifyJSON(c.Body())).
 			Any("responseHeader", respHeader).
 			RawJSON("responseBody", respBody).
 			Int("status", c.Response().StatusCode()).
@@ -60,4 +61,18 @@ func LoggingMiddleware(log zerolog.Logger) fiber.Handler {
 
 		return err
 	}
+}
+
+func minifyJSON(src []byte) []byte {
+	if len(src) == 0 {
+		return []byte("null")
+	}
+	var dst bytes.Buffer
+	if err := json.Compact(&dst, src); err != nil {
+		if b, err := json.Marshal(string(src)); err == nil {
+			return b
+		}
+		return []byte("null")
+	}
+	return dst.Bytes()
 }

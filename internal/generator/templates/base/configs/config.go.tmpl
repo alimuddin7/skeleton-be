@@ -30,10 +30,10 @@ type Config struct {
 	Database struct {
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}
-		MySQL      struct { Host string `envconfig:"MYSQL_HOST"`; Port int `envconfig:"MYSQL_PORT"`; User string `envconfig:"MYSQL_USER"`; Pass string `envconfig:"MYSQL_PASS"`; Database string `envconfig:"MYSQL_DB"` }
+		MySQL      struct { Host string `envconfig:"MYSQL_HOST"`; Port int `envconfig:"MYSQL_PORT"`; User string `envconfig:"MYSQL_USER"`; Pass string `envconfig:"MYSQL_PASS"`; Database string `envconfig:"MYSQL_DB"`; MaxConn int `envconfig:"MYSQL_MAX_CONN"`; MaxIdleConn int `envconfig:"MYSQL_MAX_IDLE_CONN"`; ConnMaxIdleTime time.Duration `envconfig:"MYSQL_CONN_MAX_IDLE_TIME"`; ConnMaxLifetime time.Duration `envconfig:"MYSQL_CONN_MAX_LIFETIME"` }
 		{{- end}}
 		{{- if eq . "postgresql"}}
-		PostgreSQL struct { Host string `envconfig:"POSTGRE_HOST"`; Port int `envconfig:"POSTGRE_PORT"`; User string `envconfig:"POSTGRE_USER"`; Pass string `envconfig:"POSTGRE_PASS"`; Database string `envconfig:"POSTGRE_DB"`; SSLMode string `envconfig:"POSTGRE_SSL"` }
+		PostgreSQL struct { Host string `envconfig:"POSTGRE_HOST"`; Port int `envconfig:"POSTGRE_PORT"`; User string `envconfig:"POSTGRE_USER"`; Pass string `envconfig:"POSTGRE_PASS"`; Database string `envconfig:"POSTGRE_DB"`; SSLMode string `envconfig:"POSTGRE_SSL"`; MaxConn int `envconfig:"POSTGRE_MAX_CONN"`; MaxIdleConn int `envconfig:"POSTGRE_MAX_IDLE_CONN"`; ConnMaxIdleTime time.Duration `envconfig:"POSTGRE_CONN_MAX_IDLE_TIME"`; ConnMaxLifetime time.Duration `envconfig:"POSTGRE_CONN_MAX_LIFETIME"` }
 		{{- end}}
 		{{- if eq . "redis"}}
 		Redis      struct { Address string `envconfig:"REDIS_ADDRESS"`; Port int `envconfig:"REDIS_PORT"`; Password string `envconfig:"REDIS_PASSWORD"`; DBType int `envconfig:"REDIS_DB_TYPE"` }

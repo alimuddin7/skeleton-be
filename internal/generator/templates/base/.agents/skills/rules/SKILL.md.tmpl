@@ -1,0 +1,28 @@
+---
+name: rules
+description: Code standards, directory conventions, and CLI usage rules for skeleton-be generator development.
+---
+
+# Microservice Code Standards & Rules
+
+Follow these rules when writing code or creating packages in this project:
+
+## Directory Structure
+
+- `cmd/`: Application entrypoints.
+- `configs/`: Environment configuration struct and `.env` loader.
+- `controllers/`: HTTP/Router handlers (e.g. `controllers/v1/`).
+- `usecases/`: Pure business logic functions (e.g. `usecases/v1/`).
+- `repositories/`: Database interaction wrappers (GORM, Redis, Kafka).
+- `models/`: Domain schemas and Request/Response DTOs.
+- `routers/`: Fiber router paths and controller registration.
+- `helpers/`: Utilities (auth, signature, loggers, Middlewares).
+- `migrations/`: SQL migration files.
+
+## Common Operations
+
+To build, test, or run the service:
+- **Run locally**: `go run main.go` or `make run`
+- **Build binary**: `go build -o service main.go` or `make build`
+- **Test**: `go test ./...` or `make test`
+- **Docker Compose**: `docker-compose -f docker/docker-compose.yml up -d`

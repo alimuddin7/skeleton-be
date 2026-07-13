@@ -35,7 +35,7 @@ func toUpperSnakeCase(s string) string {
 	return strings.ToUpper(strings.Join(parts, "_"))
 }
 
-//go:embed templates
+//go:embed all:templates
 var templateFS embed.FS
 
 type Config struct {
@@ -59,6 +59,15 @@ func Generate(destDir string, cfg Config) error {
 	}
 	fmt.Printf("[DEBUG] Project directory created: %s\n", destDir)
 
+	// Load old config if it exists
+	var oldCfg *Config
+	statePath := filepath.Join(destDir, "skeleton.json")
+	if _, err := os.Stat(statePath); err == nil {
+		if old, err := loadProjectState(statePath); err == nil {
+			oldCfg = old
+		}
+	}
+
 	if err := createDirectoryStructure(destDir, cfg); err != nil {
 		return err
 	}
@@ -71,7 +80,7 @@ func Generate(destDir string, cfg Config) error {
 	appendModuleTemplates(cfg, templates)
 
 	for tmplPath, destPath := range templates {
-		if err := renderAppTemplate(tmplPath, filepath.Join(destDir, destPath), cfg); err != nil {
+		if err := renderPreservedTemplate(tmplPath, filepath.Join(destDir, destPath), oldCfg, cfg); err != nil {
 			return err
 		}
 	}
@@ -91,7 +100,7 @@ func Generate(destDir string, cfg Config) error {
 			HostNameLower: lowerName,
 			HostNameTitle: toPascalCase(host),
 		}
-		if err := renderAppTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg); err != nil {
+		if err := renderPreservedTemplate("templates/modules/host.go.tmpl", filepath.Join(hostDir, "host.go"), hostCfg, hostCfg); err != nil {
 			return err
 		}
 	}
@@ -699,13 +708,13 @@ func getBaseTemplates() map[string]string {
 		"templates/base/helpers/utils.go.tmpl":                      "helpers/utils.go",
 		"templates/base/helpers/auth.go.tmpl":                       "helpers/auth.go",
 		"templates/base/helpers/http.go.tmpl":                       "helpers/http.go",
-		"templates/base/infra/Makefile.tmpl":                        "Makefile",
+		"templates/base/Makefile.tmpl":                              "Makefile",
 		"templates/base/docker/Dockerfile.tmpl":                     "docker/Dockerfile",
 		"templates/base/docker/docker-compose.yml.tmpl":             "docker/docker-compose.yml",
 		"templates/base/docker/docker-compose-prod.yml.tmpl":        "docker/docker-compose-prod.yml",
 		"templates/base/docker/docker-compose-stg.yml.tmpl":         "docker/docker-compose-stg.yml",
 		"templates/base/configs/env.tmpl":                           ".env.example",
-		"templates/base/infra/gitlab-ci.yml.tmpl":                   ".gitlab-ci.yml",
+		"templates/base/gitlab/gitlab-ci.yml.tmpl":                  ".gitlab-ci.yml",
 		"templates/base/gitlab/ci/build.gitlab-ci.yml.tmpl":         ".gitlab/ci/build.gitlab-ci.yml",
 		"templates/base/gitlab/ci/deploy.gitlab-ci.yml.tmpl":        ".gitlab/ci/deploy.gitlab-ci.yml",
 		"templates/base/gitlab/ci/sonar-scanner.gitlab-ci.yml.tmpl": ".gitlab/ci/sonar-scanner.gitlab-ci.yml",
@@ -714,8 +723,15 @@ func getBaseTemplates() map[string]string {
 		"templates/base/errorcodes/errorcodes_en.json.tmpl":         "errorcodes/errorcodes-en.json",
 		"templates/base/models/dto/response.go.tmpl":                "models/dto/response.go",
 		"templates/base/models/dto/consumer.go.tmpl":                "models/dto/consumer.go",
-		"templates/base/models/dto/healthcheck.go.tmpl":             "models/healthcheck.go",
+		"templates/base/models/healthcheck.go.tmpl":                 "models/healthcheck.go",
 		"templates/base/internal/app/app.go.tmpl":                   "internal/app/app.go",
+		"templates/base/.agents/AGENTS.md.tmpl":                     ".agents/AGENTS.md",
+		"templates/base/.agents/skills/architecture/SKILL.md.tmpl":  ".agents/skills/architecture/SKILL.md",
+		"templates/base/.agents/skills/rules/SKILL.md.tmpl":         ".agents/skills/rules/SKILL.md",
+		"templates/base/.agents/skills/security/SKILL.md.tmpl":      ".agents/skills/security/SKILL.md",
+		"templates/base/.agents/workflows/add.md.tmpl":              ".agents/workflows/add.md",
+		"templates/base/.agents/workflows/remove.md.tmpl":           ".agents/workflows/remove.md",
+		"templates/base/.agents/workflows/migration.md.tmpl":        ".agents/workflows/migration.md",
 	}
 }
 
@@ -835,18 +851,10 @@ func createFeatureConfig(cfg *Config, name string, isCRUD bool, dbType string) f
 // 	return os.WriteFile(filePath, newContent, 0644)
 // }
 
-func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
+func executeTemplate(tmplPath string, data interface{}) ([]byte, error) {
 	content, err := templateFS.ReadFile(tmplPath)
 	if err != nil {
-		// Try to list the directory to see what's there
-		dir := filepath.Dir(tmplPath)
-		entries, _ := templateFS.ReadDir(dir)
-		var files []string
-		for _, e := range entries {
-			files = append(files, e.Name())
-		}
-		fmt.Printf("Error reading embedded template %s: %v. Available files in %s: %v\n", tmplPath, err, dir, files)
-		return fmt.Errorf("error reading embedded template %s: %v. Available files in %s: %v", tmplPath, err, dir, files)
+		return nil, err
 	}
 
 	tmpl, err := template.New(filepath.Base(tmplPath)).Funcs(template.FuncMap{
@@ -875,25 +883,60 @@ func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
 		},
 	}).Parse(string(content))
 	if err != nil {
-		return fmt.Errorf("error parsing template %s: %v", tmplPath, err)
+		return nil, err
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
-		return fmt.Errorf("error executing template %s: %v", tmplPath, err)
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func renderAppTemplate(tmplPath, destPath string, data interface{}) error {
+	bufBytes, err := executeTemplate(tmplPath, data)
+	if err != nil {
+		dir := filepath.Dir(tmplPath)
+		entries, _ := templateFS.ReadDir(dir)
+		var files []string
+		for _, e := range entries {
+			files = append(files, e.Name())
+		}
+		fmt.Printf("Error reading embedded template %s: %v. Available files in %s: %v\n", tmplPath, err, dir, files)
+		return fmt.Errorf("error reading embedded template %s: %v. Available files in %s: %v", tmplPath, err, dir, files)
 	}
 
 	dirToCreate := filepath.Dir(destPath)
-	fmt.Printf("[DEBUG] renderAppTemplate: writing to %s, ensuring dir %s exists\n", destPath, dirToCreate)
 	if err := os.MkdirAll(dirToCreate, 0755); err != nil {
-		fmt.Printf("[DEBUG] Failed to create parent directory %s: %v\n", dirToCreate, err)
 		return fmt.Errorf("error creating directory for %s: %v", destPath, err)
 	}
 
-	if err := os.WriteFile(destPath, buf.Bytes(), 0644); err != nil {
-		fmt.Printf("[DEBUG] Failed to write file %s: %v\n", destPath, err)
+	if err := os.WriteFile(destPath, bufBytes, 0644); err != nil {
 		return fmt.Errorf("error writing to %s: %v", destPath, err)
 	}
-	fmt.Printf("[DEBUG] Successfully wrote file: %s\n", destPath)
 	return nil
+}
+
+func renderPreservedTemplate(tmplPath, destPath string, oldData, newData interface{}) error {
+	if _, err := os.Stat(destPath); os.IsNotExist(err) {
+		return renderAppTemplate(tmplPath, destPath, newData)
+	}
+
+	if oldData != nil {
+		oldContent, errGen := executeTemplate(tmplPath, oldData)
+		currentContent, errRead := os.ReadFile(destPath)
+		if errGen == nil && errRead == nil {
+			if string(currentContent) != string(oldContent) {
+				newDestPath := destPath + ".new"
+				if err := renderAppTemplate(tmplPath, newDestPath, newData); err != nil {
+					return err
+				}
+				fmt.Printf("Warning: file %s has been modified by user. Saved new template as %s\n", destPath, newDestPath)
+				return nil
+			}
+		}
+	}
+
+	return renderAppTemplate(tmplPath, destPath, newData)
 }

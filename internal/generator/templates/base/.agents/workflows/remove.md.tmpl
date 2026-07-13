@@ -1,0 +1,28 @@
+# Workflow: Manually Removing Components & Wires
+
+This workflow guides you (the AI Agent) through cleanly removing features, modules, or stubs from the codebase without leaving dead wires or compiler errors.
+
+---
+
+## Step-by-Step Removal Checklist
+
+### Step 1: Remove Route Registrations
+- Open `routers/main.go`.
+- Delete the Fiber endpoints/group registrations associated with the component (e.g. remove `v1Group.Get("/products", ...)`).
+
+### Step 2: Remove Dependency Wiring
+- Open `internal/app/app.go`.
+- Remove instantiations of the controller, usecase, and repository for that component.
+- Delete any injections into other usecases.
+- Clean up unused imports at the top of `internal/app/app.go`.
+
+### Step 3: Delete Package Files
+- Delete the feature directories:
+  - `controllers/v1/[feature_name]/`
+  - `usecases/v1/[feature_name]/`
+  - `repositories/[db_type]/[feature_name].go` (or `repositories/[feature_name]/`)
+  - `models/[feature_name].go` and `models/dto/[feature_name].go`
+  
+### Step 4: Run Code Analysis & Sync
+- Execute `go mod tidy` in the terminal to remove unused third-party imports from `go.mod` and `go.sum`.
+- Run tests (`go test ./...`) to ensure that no compile errors remain.

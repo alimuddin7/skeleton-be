@@ -1,0 +1,66 @@
+# Workflow: Manually Adding Components & Code Features
+
+This workflow provides step-by-step manual coding guidelines for you (the AI Agent) to extend this microservice, ensuring you follow the repository's Clean Architecture conventions.
+
+---
+
+## 1. Manually Adding a new CRUD Stack (Entity)
+To add a new CRUD entity (e.g. `product`), perform the following tasks:
+
+### Task A: Create Model & DTOs
+- Create `models/product.go` with domain structs and DB tags.
+- Create DTO schemas for request/response payloads in `models/dto/product.go` (e.g. `CreateProductRequest`, `ProductResponse`).
+
+### Task B: Create GORM Repository
+- Create the repository directory: `repositories/product/` (or place GORM logic directly inside `repositories/mysql/product.go` or `repositories/postgre/product.go`).
+- Expose a `ProductRepository` interface and its implementation:
+```go
+type ProductRepository interface {
+    Create(ctx context.Context, p *models.Product) error
+    Get(ctx context.Context, id int) (*models.Product, error)
+}
+```
+
+### Task C: Create Usecase
+- Create `usecases/v1/product/product.go` containing the business logic.
+- Inject the repository interface into the constructor: `NewProductUsecase(repo repositories.ProductRepository, logger zerolog.Logger) Usecase`.
+
+### Task D: Create Controller (Fiber Handler)
+- Create `controllers/v1/product/product.go`.
+- Parse HTTP requests, validate fields, and delegate to the Usecase.
+
+### Task E: Wire Dependencies (`internal/app/app.go`)
+- Open `internal/app/app.go`.
+- Instantiate the repository, usecase, and controller:
+```go
+productRepo := product.NewProductRepository(repo.GetMysql())
+productUsecase := product.NewProductUsecase(productRepo, logger)
+productCtrl := product.NewProductController(productUsecase)
+```
+
+### Task F: Register Route Paths (`routers/main.go`)
+- Open `routers/main.go`.
+- Register the handlers under the Fiber router:
+```go
+v1Group.Post("/products", productCtrl.Create)
+v1Group.Get("/products/:id", productCtrl.Get)
+```
+
+---
+
+## 2. Manually Adding an External API Client Wrapper (Host)
+To integrate with an external API host (e.g. `payment-gateway`):
+
+1. **Host Client Implementation**: Create a new package under `hosts/payment_gateway/client.go`. Use a custom HTTP Client with configurable timeouts and retries.
+2. **Add Config**: Add host URL, Timeout, and MaxRetry fields to `configs/config.go` struct under the `Hosts` configuration block, and define them in `.env`.
+3. **Register / Wire**:
+   - Add fields to the `Host` struct in `hosts/hosts.go`.
+   - Wire the client in `internal/app/app.go` and inject it into Usecases that require external API communication.
+
+---
+
+## 3. Manually Adding a Custom Helper Stub
+To add a helper function utility:
+1. Create `helpers/[utility_name].go` (e.g., `helpers/encryption.go`).
+2. Implement your utility function ensuring it has proper logging and handles errors gracefully.
+3. Call the helper directly where needed.

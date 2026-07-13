@@ -1,0 +1,32 @@
+# Workflow: Database Migration Management
+
+This workflow guides you (the AI Agent) on how to manually create and write SQL migrations for the database schema updates in this microservice.
+
+---
+
+## 1. Creating Migration Files
+
+Database migrations in this project are located in the `migrations/` directory.
+
+To create a new migration pair:
+1. Generate the timestamp prefix in format `YYYYMMDDHHMMSS` (e.g. `20260708110000`).
+2. Create two new SQL files:
+   - **Up migration**: `migrations/[timestamp]_[migration_name].up.sql` (defines schema creation, table adds, column alterations).
+   - **Down migration**: `migrations/[timestamp]_[migration_name].down.sql` (defines schema rollback/drop instructions).
+
+Example file names:
+- `migrations/20260708110000_create_products_table.up.sql`
+- `migrations/20260708110000_create_products_table.down.sql`
+
+---
+
+## 2. Writing SQL Operations
+
+### Rules for Up Migrations (`.up.sql`)
+- Always make operations idempotent where possible (e.g., `CREATE TABLE IF NOT EXISTS`).
+- Define columns, types, primary keys, foreign keys, and indexes explicitly.
+- Use standard SQL dialect matching the project's primary database (MySQL or PostgreSQL).
+
+### Rules for Down Migrations (`.down.sql`)
+- Write corresponding rollback operations (e.g. `DROP TABLE IF EXISTS`).
+- Down operations must execute in reverse order to resolve foreign key constraints before dropping parent tables.

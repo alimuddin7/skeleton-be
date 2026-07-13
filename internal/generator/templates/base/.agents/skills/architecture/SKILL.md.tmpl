@@ -1,0 +1,24 @@
+---
+name: architecture
+description: Guidelines on developing and modifying code templates adhering to skeleton-be's Clean Architecture pattern.
+---
+
+# Go Clean Architecture Guidelines
+
+This skill guides you through developing or modifying features inside this microservice project.
+
+## Code Layers & Flow
+
+1. **Routing & Delivery**: `routers/main.go` registers paths using Fiber v3. HTTP handlers are defined in `controllers/v1/`.
+2. **Business Logic**: `usecases/v1/` contains the business capabilities and checks. It must be database-agnostic.
+3. **Data Access**: `repositories/` handles operations for MySQL/PostgreSQL (GORM), Redis (standalone/cluster), or message queues (NATS, Kafka, Asynq).
+4. **Data Entities**: `models/` defines entities, and `models/dto/` contains request/response schemas.
+
+## Dependency Wiring (`internal/app/app.go`)
+
+Every new feature's controller, usecase, and repository must be instantiated and wired inside `internal/app/app.go`. Follow this order:
+
+1. **Initialize Repositories**: Create repository instance (e.g. `productRepo := product.NewProductRepository(repo.GetMysql())`).
+2. **Initialize Usecases**: Inject the repository into the usecase (e.g. `productUsecase := product.NewProductUsecase(productRepo, logger)`).
+3. **Initialize Controllers**: Inject the usecase into the controller (e.g. `productCtrl := product.NewProductController(productUsecase)`).
+4. **Router Wiring**: Handlers are passed to the controller layer and registered in `routers/main.go`.

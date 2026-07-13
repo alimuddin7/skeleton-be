@@ -45,6 +45,25 @@ func ConnectMysql(ctx context.Context, log zerolog.Logger) *gorm.DB {
 		log.Error().Ctx(ctx).Err(err).Msg("Error open mysql connection")
 		panic("failed to connect database")
 	}
+	
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Error().Ctx(ctx).Err(err).Msg("Error getting sql.DB from gorm")
+		panic("failed to connect database")
+	}
+	if conf.MaxConn > 0 {
+		sqlDB.SetMaxOpenConns(conf.MaxConn)
+	}
+	if conf.MaxIdleConn > 0 {
+		sqlDB.SetMaxIdleConns(conf.MaxIdleConn)
+	}
+	if conf.ConnMaxIdleTime > 0 {
+		sqlDB.SetConnMaxIdleTime(conf.ConnMaxIdleTime)
+	}
+	if conf.ConnMaxLifetime > 0 {
+		sqlDB.SetConnMaxLifetime(conf.ConnMaxLifetime)
+	}
+
 	return db
 }
 

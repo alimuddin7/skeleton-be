@@ -55,6 +55,9 @@ Available Infrastructure Modules:
 		if primaryDb == "postgres" {
 			primaryDb = "postgresql"
 		}
+		if primaryDb == "none" {
+			primaryDb = ""
+		}
 
 		modules, _ := cmd.Flags().GetStringSlice("modules")
 		grpc := "No"
@@ -112,7 +115,7 @@ Available Infrastructure Modules:
 			groups = append(groups, huh.NewGroup(
 				huh.NewSelect[string]().
 					Title("Primary Database").
-					Options(huh.NewOptions("mysql", "postgresql")...).
+					Options(huh.NewOptions("mysql", "postgresql", "none")...).
 					Value(&primaryDb),
 			))
 		}
@@ -146,15 +149,6 @@ Available Infrastructure Modules:
 				Value(&messagingBroker),
 		))
 
-		// Step 7: Role for messaging — always shown, ignored if no broker selected
-		groups = append(groups, huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Messaging Role").
-				Description("How will this service use the messaging modules? (Ignored if no broker selected above)").
-				Options(huh.NewOptions("Consumer", "Publisher", "Both")...).
-				Value(&messagingRole),
-		))
-
 		// Step 8: External Hosts / API integration
 		if !cmd.Flags().Changed("hosts") {
 			groups = append(groups, huh.NewGroup(
@@ -162,19 +156,6 @@ Available Infrastructure Modules:
 					Title("External API Hosts").
 					Description("Nama host eksternal, pisah koma jika lebih dari satu (e.g. core-payment,user-service). Kosongkan untuk skip").
 					Value(&hostInput),
-			))
-		}
-
-		// Step 9: gRPC
-		fGrpc, _ := cmd.Flags().GetString("grpc")
-		if fGrpc != "" {
-			grpc = fGrpc
-		} else {
-			groups = append(groups, huh.NewGroup(
-				huh.NewSelect[string]().
-					Title("gRPC Support").
-					Options(huh.NewOptions("No", "Server", "Client", "Both")...).
-					Value(&grpc),
 			))
 		}
 
@@ -186,6 +167,85 @@ Available Infrastructure Modules:
 				}
 				return fmt.Errorf("init cancelled: %w", err)
 			}
+		}
+
+		// Conditional Step 7: Messaging Role (only if messaging broker is selected)
+		if messagingBroker != "" {
+			isWorker := false
+			isPublisher := false
+			for _, pt := range projectTypes {
+				if pt == "Worker" {
+					isWorker = true
+				}
+				if pt == "Publisher" {
+					isPublisher = true
+				}
+			}
+
+			if isWorker && isPublisher {
+				messagingRole = "Both"
+			} else if isWorker {
+				messagingRole = "Consumer"
+			} else if isPublisher {
+				messagingRole = "Publisher"
+			} else {
+				// Show prompt if the role is not implied and it's interactive mode (fType is empty)
+				if fType == "" {
+					roleGroup := huh.NewGroup(
+						huh.NewSelect[string]().
+							Title("Messaging Role").
+							Description("How will this service use the messaging modules?").
+							Options(huh.NewOptions("Consumer", "Publisher", "Both")...).
+							Value(&messagingRole),
+					)
+					if err := huh.NewForm(roleGroup).Run(); err != nil {
+						if err.Error() == "user aborted" {
+							fmt.Println("Cancelled.")
+							return nil
+						}
+						return fmt.Errorf("init cancelled: %w", err)
+					}
+				} else {
+					messagingRole = "Both"
+				}
+			}
+		}
+
+		// Conditional Step 9: gRPC support
+		fGrpc, _ := cmd.Flags().GetString("grpc")
+		hasGrpcType := false
+		for _, pt := range projectTypes {
+			if pt == "gRPC" {
+				hasGrpcType = true
+				break
+			}
+		}
+
+		if hasGrpcType {
+			if fGrpc != "" {
+				grpc = fGrpc
+			} else {
+				if fType == "" {
+					grpcGroup := huh.NewGroup(
+						huh.NewSelect[string]().
+							Title("gRPC Support").
+							Description("Choose how gRPC will be used in this service").
+							Options(huh.NewOptions("Server", "Client", "Both")...).
+							Value(&grpc),
+					)
+					if err := huh.NewForm(grpcGroup).Run(); err != nil {
+						if err.Error() == "user aborted" {
+							fmt.Println("Cancelled.")
+							return nil
+						}
+						return fmt.Errorf("init cancelled: %w", err)
+					}
+				} else {
+					grpc = "Server"
+				}
+			}
+		} else {
+			grpc = "No"
 		}
 
 		// Parse hosts

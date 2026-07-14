@@ -2,7 +2,7 @@ package consumers
 
 import (
 	"context"
-	{{- if or (has .Modules "nats-consumer") (has .Modules "asynq-consumer") (has .Modules "kafka-consumer")}}
+	{{- if has .Modules "nats-consumer"}}
 	"{{.ProjectName}}/configs"
 	{{- end}}
 	"{{.ProjectName}}/repositories"

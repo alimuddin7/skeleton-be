@@ -27,7 +27,7 @@ type asynqRepository struct {
 	logs   zerolog.Logger
 }
 
-func ConnectAsynq(l zerolog.Logger) (*asynq.Client, *asynq.Server) {
+func ConnectAsynq(ctx context.Context, l zerolog.Logger) (*asynq.Client, *asynq.Server) {
 	redisConn := asynq.RedisClientOpt{
 		Addr:     configs.Cfg.Database.Asynq.RedisAddr,
 		Password: configs.Cfg.Database.Asynq.RedisPassword,

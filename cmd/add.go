@@ -123,6 +123,9 @@ Example:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		dbType, _ := cmd.Flags().GetString("db")
+		if dbType != "" && dbType != "mysql" && dbType != "postgresql" && dbType != "postgres" {
+			return fmt.Errorf("invalid database type '%s'. CRUD generation is only supported for 'mysql' and 'postgresql'", dbType)
+		}
 		fmt.Printf("Generating CRUD for %s...\n", name)
 		if err := generator.AddCRUD(name, dbType); err != nil {
 			return fmt.Errorf("failed to generate CRUD: %w", err)

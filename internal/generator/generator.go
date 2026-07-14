@@ -881,6 +881,14 @@ func executeTemplate(tmplPath string, data interface{}) ([]byte, error) {
 			}
 			return false
 		},
+		"hasDatabase": func(modules []string) bool {
+			for _, mod := range modules {
+				if mod == "mysql" || mod == "postgresql" || mod == "redis" || mod == "kafka" || mod == "nats" || mod == "asynq" || mod == "minio" || mod == "redis-cluster" {
+					return true
+				}
+			}
+			return false
+		},
 	}).Parse(string(content))
 	if err != nil {
 		return nil, err

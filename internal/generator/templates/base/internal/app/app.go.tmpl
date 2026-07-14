@@ -12,8 +12,10 @@ import (
 	{{- if has .ProjectTypes "Scheduler"}}
 	"{{.ProjectName}}/scheduler"
 	{{- end}}
-	{{- if .Modules}}
+	{{- if hasDatabase .Modules}}
 	"{{.ProjectName}}/repositories"
+	{{- end}}
+	{{- if .Modules}}
 	{{- range .Modules}}
 	{{- if eq . "mysql"}}
 	mysql "{{$.ProjectName}}/repositories/mysql"
@@ -76,7 +78,7 @@ type App struct {
 	Router     fiber.Router
 	Logs       zerolog.Logger
 	Controller controllers.Controller
-	{{- if .Modules}}
+	{{- if hasDatabase .Modules}}
 	Repo       repositories.Repository
 	{{- end}}
 	{{- if .Hosts}}
@@ -85,7 +87,7 @@ type App struct {
 	V1Usecase  v1Usecases.Usecase
 	V1Ctrl     v1Controllers.V1Controller
 	{{- if has .ProjectTypes "Scheduler"}}
-	Scheduler  *scheduler.Scheduler
+	Scheduler  scheduler.Scheduler
 	{{- end}}
 	{{- if has .ProjectTypes "gRPC"}}
 	{{- range .Modules}}
@@ -111,8 +113,9 @@ func InitializeApp() *App {
 	logger := helpers.InitializeZeroLogs()
 	startupID := helpers.GenerateTransactionID()
 	startupCtx := context.WithValue(context.Background(), constants.TRANSACTION_ID, startupID)
+	_ = startupCtx
 
-	{{- if .Modules}}
+	{{- if hasDatabase .Modules}}
 	// --- Repositories ---
 	{{- if has .Modules "nats"}}
 	nc, js := nats.ConnectNats(startupCtx, logger)
@@ -173,7 +176,7 @@ func InitializeApp() *App {
 	// [APP_HOST_INIT_MARKER]
 
 	v1Usecase := v1Usecases.InitializeV1Usecase(
-		{{- if .Modules}}repo,{{end}}
+		{{- if hasDatabase .Modules}}repo,{{end}}
 		{{- if .Hosts}}host,{{end}}
 		logger,
 	)
@@ -198,7 +201,7 @@ func InitializeApp() *App {
 	a := &App{
 		Logs:       logger,
 		Controller: controller,
-		{{- if .Modules}}
+		{{- if hasDatabase .Modules}}
 		Repo:       repo,
 		{{- end}}
 		{{- if .Hosts}}

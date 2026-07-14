@@ -51,18 +51,28 @@ func ConnectPostgre(ctx context.Context, log zerolog.Logger) *gorm.DB {
 		log.Error().Ctx(ctx).Err(err).Msg("Error getting sql.DB from gorm")
 		panic("Error open postgres connection")
 	}
-	if conf.MaxConn > 0 {
-		sqlDB.SetMaxOpenConns(conf.MaxConn)
+
+	maxConn := conf.MaxConn
+	if maxConn == 0 {
+		maxConn = 100
 	}
-	if conf.MaxIdleConn > 0 {
-		sqlDB.SetMaxIdleConns(conf.MaxIdleConn)
+	maxIdleConn := conf.MaxIdleConn
+	if maxIdleConn == 0 {
+		maxIdleConn = 10
 	}
-	if conf.ConnMaxIdleTime > 0 {
-		sqlDB.SetConnMaxIdleTime(conf.ConnMaxIdleTime)
+	maxConnWait := conf.MaxConnWait
+	if maxConnWait == 0 {
+		maxConnWait = 1 * time.Hour
 	}
-	if conf.ConnMaxLifetime > 0 {
-		sqlDB.SetConnMaxLifetime(conf.ConnMaxLifetime)
+	maxConnIdleTime := conf.MaxConnIdleTime
+	if maxConnIdleTime == 0 {
+		maxConnIdleTime = 15 * time.Minute
 	}
+
+	sqlDB.SetMaxOpenConns(maxConn)
+	sqlDB.SetMaxIdleConns(maxIdleConn)
+	sqlDB.SetConnMaxLifetime(maxConnWait)
+	sqlDB.SetConnMaxIdleTime(maxConnIdleTime)
 
 	return db
 }

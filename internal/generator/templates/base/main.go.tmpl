@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"{{.ProjectName}}/configs"
@@ -19,11 +20,18 @@ import (
 	{{- if has .Modules "asynq-consumer"}}
 	"{{.ProjectName}}/consumers"
 	{{- end}}
+
+	_ "go.uber.org/automaxprocs"
 )
 
 func main() {
 	a := app.InitializeApp()
 	logger := a.Logs
+
+	if configs.Cfg.General.GoMaxProcs > 0 {
+		runtime.GOMAXPROCS(configs.Cfg.General.GoMaxProcs)
+		logger.Info().Msgf("GOMAXPROCS set manually to %d", configs.Cfg.General.GoMaxProcs)
+	}
 
 	fiberApp := routers.InitializeRouter(a.Controller, logger)
 

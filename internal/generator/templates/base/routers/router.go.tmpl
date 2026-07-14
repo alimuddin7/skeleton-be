@@ -12,7 +12,10 @@ import (
 
 func InitializeRouter(ctrl controllers.Controller, l zerolog.Logger) *fiber.App {
 	app := fiber.New(fiber.Config{
-		AppName: configs.Cfg.General.ServiceName,
+		AppName:      configs.Cfg.General.ServiceName,
+		ReadTimeout:  configs.Cfg.Server.ReadTimeout,
+		WriteTimeout: configs.Cfg.Server.WriteTimeout,
+		IdleTimeout:  configs.Cfg.Server.IdleTimeout,
 	})
 
 	app.Use(cors.New())

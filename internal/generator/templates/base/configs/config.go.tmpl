@@ -2,6 +2,8 @@ package configs
 
 import (
 	"log"
+	"os"
+	"strings"
 	"time"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
@@ -14,13 +16,17 @@ type Config struct {
 		MaxIdleConns        int           `envconfig:"MAX_IDLE_CONNS" default:"100"`
 		MaxIdleConnsPerHost int           `envconfig:"MAX_IDLE_CONNS_PER_HOST" default:"20"`
 		IdleConnTimeout     time.Duration `envconfig:"IDLE_CONN_TIMEOUT" default:"90s"`
+		GoMaxProcs          int           `envconfig:"GOMAXPROCS"`
 	}
 	Server struct {
-		Address    string `envconfig:"ROUTER_SERVER_ADDRESS" default:"0.0.0.0"`
-		Port       string `envconfig:"ROUTER_PORT" default:"3000"`
-		MainPath   string `envconfig:"PATH_MAIN" default:"/api"`
-		SetMode    string `envconfig:"ROUTER_SETMODE" default:"debug"`
-		MaxTimeout string `envconfig:"MAX_TIMEOUT" default:"30s"`
+		Address      string        `envconfig:"ROUTER_SERVER_ADDRESS" default:"0.0.0.0"`
+		Port         string        `envconfig:"ROUTER_PORT" default:"3000"`
+		MainPath     string        `envconfig:"PATH_MAIN" default:"/api"`
+		SetMode      string        `envconfig:"ROUTER_SETMODE" default:"debug"`
+		MaxTimeout   string        `envconfig:"MAX_TIMEOUT" default:"30s"`
+		ReadTimeout  time.Duration `envconfig:"SERVER_READ_TIMEOUT" default:"10s"`
+		WriteTimeout time.Duration `envconfig:"SERVER_WRITE_TIMEOUT" default:"10s"`
+		IdleTimeout  time.Duration `envconfig:"SERVER_IDLE_TIMEOUT" default:"30s"`
 	}
 	{{- if .Hosts}}
 	Hosts     Hosts     `envconfig:"HOSTS"`
@@ -30,10 +36,10 @@ type Config struct {
 	Database struct {
 		{{- range .Modules}}
 		{{- if eq . "mysql"}}
-		MySQL      struct { Host string `envconfig:"MYSQL_HOST"`; Port int `envconfig:"MYSQL_PORT"`; User string `envconfig:"MYSQL_USER"`; Pass string `envconfig:"MYSQL_PASS"`; Database string `envconfig:"MYSQL_DB"`; MaxConn int `envconfig:"MYSQL_MAX_CONN"`; MaxIdleConn int `envconfig:"MYSQL_MAX_IDLE_CONN"`; ConnMaxIdleTime time.Duration `envconfig:"MYSQL_CONN_MAX_IDLE_TIME"`; ConnMaxLifetime time.Duration `envconfig:"MYSQL_CONN_MAX_LIFETIME"` }
+		MySQL      struct { Host string `envconfig:"MYSQL_HOST"`; Port int `envconfig:"MYSQL_PORT"`; User string `envconfig:"MYSQL_USER"`; Pass string `envconfig:"MYSQL_PASS"`; Database string `envconfig:"MYSQL_DB"`; MaxConn int `envconfig:"MYSQL_MAX_CONN" default:"100"`; MaxIdleConn int `envconfig:"MYSQL_MAX_IDLE_CONN" default:"10"`; MaxConnWait time.Duration `envconfig:"MYSQL_MAX_CONN_WAIT" default:"1h"`; MaxConnIdleTime time.Duration `envconfig:"MYSQL_MAX_CONN_IDLE_TIME" default:"15m"` }
 		{{- end}}
 		{{- if eq . "postgresql"}}
-		PostgreSQL struct { Host string `envconfig:"POSTGRE_HOST"`; Port int `envconfig:"POSTGRE_PORT"`; User string `envconfig:"POSTGRE_USER"`; Pass string `envconfig:"POSTGRE_PASS"`; Database string `envconfig:"POSTGRE_DB"`; SSLMode string `envconfig:"POSTGRE_SSL"`; MaxConn int `envconfig:"POSTGRE_MAX_CONN"`; MaxIdleConn int `envconfig:"POSTGRE_MAX_IDLE_CONN"`; ConnMaxIdleTime time.Duration `envconfig:"POSTGRE_CONN_MAX_IDLE_TIME"`; ConnMaxLifetime time.Duration `envconfig:"POSTGRE_CONN_MAX_LIFETIME"` }
+		PostgreSQL struct { Host string `envconfig:"POSTGRE_HOST"`; Port int `envconfig:"POSTGRE_PORT"`; User string `envconfig:"POSTGRE_USER"`; Pass string `envconfig:"POSTGRE_PASS"`; Database string `envconfig:"POSTGRE_DB"`; SSLMode string `envconfig:"POSTGRE_SSL"`; MaxConn int `envconfig:"POSTGRE_MAX_CONN" default:"100"`; MaxIdleConn int `envconfig:"POSTGRE_MAX_IDLE_CONN" default:"10"`; MaxConnWait time.Duration `envconfig:"POSTGRE_MAX_CONN_WAIT" default:"1h"`; MaxConnIdleTime time.Duration `envconfig:"POSTGRE_MAX_CONN_IDLE_TIME" default:"15m"` }
 		{{- end}}
 		{{- if eq . "redis"}}
 		Redis      struct { Address string `envconfig:"REDIS_ADDRESS"`; Port int `envconfig:"REDIS_PORT"`; Password string `envconfig:"REDIS_PASSWORD"`; DBType int `envconfig:"REDIS_DB_TYPE"` }
@@ -103,6 +109,15 @@ var Cfg Config
 
 func LoadConfig() {
 	_ = godotenv.Load(".env")
+
+	// Unset empty environment variables so that envconfig doesn't try to parse them
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 && parts[1] == "" {
+			os.Unsetenv(parts[0])
+		}
+	}
+
 	if err := envconfig.Process("", &Cfg); err != nil {
 		log.Fatalf("Failed to load from ENV: %v", err)
 	}

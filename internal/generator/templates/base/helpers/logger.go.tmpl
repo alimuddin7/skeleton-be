@@ -43,7 +43,7 @@ func InitializeZeroLogs() zerolog.Logger {
 		return fmt.Sprintf("%s:%d [%s]", path.Base(file), line, funcName)
 	}
 	
-	logger := zerolog.New(output).With().Timestamp().Str("service", configs.Cfg.General.ServiceName).Logger().Hook(TraceIDHook{})
+	logger := zerolog.New(output).With().Timestamp().Caller().Str("service", configs.Cfg.General.ServiceName).Logger().Hook(TraceIDHook{})
 	return logger
 }
 

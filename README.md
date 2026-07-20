@@ -1,4 +1,4 @@
-# skeleton-be
+# skeleton-svc
 
 > **CLI boilerplate generator** untuk Go microservices berbasis **Fiber v3** — scaffold project siap produksi dalam hitungan detik.
 
@@ -20,7 +20,7 @@
 
 ## Tentang Project
 
-`skeleton-be` adalah CLI tool yang mengotomatisasi pembuatan boilerplate Go microservice. Alih-alih menyalin template secara manual, cukup jalankan satu perintah dan dapatkan project yang sudah terstruktur rapi dengan integrasi infrastruktur (database, cache, messaging, storage), CI/CD pipeline, dan Docker siap pakai.
+`skeleton-svc` adalah CLI tool yang mengotomatisasi pembuatan boilerplate Go microservice. Alih-alih menyalin template secara manual, cukup jalankan satu perintah dan dapatkan project yang sudah terstruktur rapi dengan integrasi infrastruktur (database, cache, messaging, storage), CI/CD pipeline, dan Docker siap pakai.
 
 **Target pengguna:** Backend engineer yang ingin memulai microservice baru dengan standar Clean Architecture tanpa setup berulang.
 
@@ -111,13 +111,13 @@ your-service/
 ## Struktur Direktori CLI
 
 ```
-skeleton-be/                    # Source code CLI tool ini
+skeleton-svc/                    # Source code CLI tool ini
 ├── cmd/
 │   ├── root.go                 # Root command
-│   ├── init.go                 # skeleton-be init (wizard 9-step)
-│   ├── add.go                  # skeleton-be add (module/crud/route/host/helper)
-│   ├── migrate.go              # skeleton-be migrate create
-│   └── remove.go               # skeleton-be remove crud
+│   ├── init.go                 # skeleton-svc init (wizard 9-step)
+│   ├── add.go                  # skeleton-svc add (module/crud/route/host/helper)
+│   ├── migrate.go              # skeleton-svc migrate create
+│   └── remove.go               # skeleton-svc remove crud
 ├── internal/
 │   └── generator/
 │       ├── generator.go        # Core generator logic
@@ -209,7 +209,7 @@ Setelah wizard selesai, generator akan:
 ### Install via Go
 
 ```bash
-go install github.com/alimuddin7/skeleton-be@latest
+go install andromeda.ottopay.id/pt-rtsm-ottopay/skeleton-svc@latest
 ```
 
 Binary akan otomatis tersedia di `$GOPATH/bin`. Pastikan `$GOPATH/bin` sudah ada di `$PATH`:
@@ -221,7 +221,7 @@ export PATH=$PATH:$(go env GOPATH)/bin
 ### Verifikasi
 
 ```bash
-skeleton-be --help
+skeleton-svc --help
 ```
 
 ---
@@ -231,7 +231,7 @@ skeleton-be --help
 ### 1. Membuat Project Baru (Interactive)
 
 ```bash
-skeleton-be init
+skeleton-svc init
 ```
 
 Wizard akan memandu 9 langkah konfigurasi. Setelah selesai, folder project langsung dibuat di direktori saat ini.
@@ -239,7 +239,7 @@ Wizard akan memandu 9 langkah konfigurasi. Setelah selesai, folder project langs
 ### 2. Membuat Project Baru (Non-Interactive / Scripted)
 
 ```bash
-skeleton-be init \
+skeleton-svc init \
   --name payment-service \
   --code PS01 \
   --type Backend \
@@ -256,17 +256,17 @@ skeleton-be init \
 cd payment-service
 
 # Tambah Redis
-skeleton-be add module redis
+skeleton-svc add module redis
 
 # Tambah NATS (akan ditanya role: Consumer/Publisher/Both)
-skeleton-be add module nats
+skeleton-svc add module nats
 ```
 
 ### 4. Generate CRUD Baru
 
 ```bash
-skeleton-be add crud transaction
-skeleton-be add crud product --db postgresql
+skeleton-svc add crud transaction
+skeleton-svc add crud product --db postgresql
 ```
 
 Menghasilkan file:
@@ -279,15 +279,15 @@ Menghasilkan file:
 ### 5. Generate Route Non-CRUD
 
 ```bash
-skeleton-be add route healthcheck
-skeleton-be add route login
+skeleton-svc add route healthcheck
+skeleton-svc add route login
 ```
 
 ### 6. Tambah External API Client
 
 ```bash
-skeleton-be add host midtrans
-skeleton-be add host xendit
+skeleton-svc add host midtrans
+skeleton-svc add host xendit
 ```
 
 Menghasilkan `hosts/midtrans/host.go` dengan HTTP client wrapper yang sudah terstruktur.
@@ -295,13 +295,13 @@ Menghasilkan `hosts/midtrans/host.go` dengan HTTP client wrapper yang sudah ters
 ### 7. Buat Helper Baru
 
 ```bash
-skeleton-be add helper password-hash
+skeleton-svc add helper password-hash
 ```
 
 ### 8. Buat Migration File
 
 ```bash
-skeleton-be migrate create create_transactions_table
+skeleton-svc migrate create create_transactions_table
 ```
 
 Menghasilkan:
@@ -311,7 +311,7 @@ Menghasilkan:
 ### 9. Hapus CRUD Stack
 
 ```bash
-skeleton-be remove crud transaction
+skeleton-svc remove crud transaction
 ```
 
 ---
@@ -319,7 +319,7 @@ skeleton-be remove crud transaction
 ## Referensi Command
 
 ```
-skeleton-be
+skeleton-svc
 ├── init          Inisialisasi project baru (wizard atau flag)
 ├── add
 │   ├── module    Tambah modul infrastruktur

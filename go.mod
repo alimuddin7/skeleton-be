@@ -1,4 +1,4 @@
-module github.com/alimuddin7/skeleton-be
+module andromeda.ottopay.id/pt-rtsm-ottopay/skeleton-svc
 
 go 1.25.6
 
